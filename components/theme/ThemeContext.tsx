@@ -53,7 +53,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const nextResolved = theme === "system" ? getSystemTheme() : theme;
       setResolvedTheme(nextResolved);
       root.dataset.theme = nextResolved;
+
+      if (nextResolved === "dark") root.classList.add("dark");
+      else root.classList.remove("dark");
     };
+
 
     applyResolved();
 

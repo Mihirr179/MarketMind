@@ -27,17 +27,21 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="border-b border-zinc-800 bg-zinc-950/95 px-4 py-4 backdrop-blur-xl md:sticky md:top-0 md:h-screen md:w-64 md:shrink-0 md:border-b-0 md:border-r md:px-5 md:py-7">
+    <aside className="border-b border-zinc-200/60 bg-white/95 dark:bg-zinc-950/95 px-4 py-4 backdrop-blur-xl transition-all duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:w-64 md:shrink-0 md:border-b-0 md:border-r md:px-5 md:py-7 dark:border-zinc-800">
+
       <Link
         href="/dashboard"
         className="mb-4 flex items-center gap-3 px-2 md:mb-9"
         aria-label="MarketMind dashboard"
       >
-        <span className="grid size-10 place-items-center rounded-xl bg-yellow-400 text-black shadow-lg shadow-yellow-400/15">
+        <span className="grid size-10 place-items-center rounded-xl bg-[var(--accent)] text-zinc-900 dark:text-zinc-900 shadow-lg shadow-yellow-400/15">
+
           <ChartNoAxesCombined size={22} strokeWidth={2.4} />
         </span>
-        <span className="text-2xl font-bold tracking-tight text-white">
-          Market<span className="text-yellow-400">Mind</span>
+        <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+
+          Market<span className="text-[var(--accent)]">Mind</span>
+
         </span>
       </Link>
 
@@ -54,9 +58,10 @@ export default function Sidebar() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 md:w-full ${
-                active
-                  ? "bg-yellow-400 text-black shadow-lg shadow-yellow-400/10"
-                  : "text-zinc-400 hover:bg-zinc-900 hover:text-yellow-400"
+                  active
+                  ? "bg-[var(--accent)] text-zinc-900 shadow-lg shadow-yellow-400/10"
+                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-[var(--accent)]"
+
               }`}
             >
               <Icon size={19} aria-hidden="true" />

@@ -17,7 +17,8 @@ type Props = {
 
 export default function ProfileDropdown({ userName = "User" }: Props) {
   const router = useRouter();
-  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+
 
   const [open, setOpen] = useState(false);
 
@@ -42,32 +43,36 @@ export default function ProfileDropdown({ userName = "User" }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="group flex items-center gap-2 rounded-xl border border-[color:var(--mm-border)]/70 bg-[color:rgba(17,24,39,0.2)] px-3 py-2 transition-all duration-300 hover:border-[#FACC15]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--mm-primary)]/40"
+        className="group flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 transition-all duration-300 hover:border-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/40 dark:border-zinc-800 dark:bg-zinc-900"
         aria-label="Open profile menu"
         aria-expanded={open}
       >
-        <span className="grid size-8 place-items-center rounded-full bg-[color:rgba(250,204,21,0.10)] border border-[color:var(--mm-primary)]/30 text-xs font-bold text-[color:var(--mm-primary)]">
+        <span className="grid size-8 place-items-center rounded-full bg-yellow-400/10 border border-yellow-400/30 text-xs font-bold text-yellow-600 dark:text-yellow-300">
           {initials || <UserRound size={16} />}
         </span>
-        <span className="hidden text-sm font-semibold text-[var(--mm-text)]/90 sm:inline">{userName}</span>
+        <span className="hidden text-sm font-semibold text-zinc-900 dark:text-zinc-100 sm:inline">{userName}</span>
       </button>
 
+
       <div
-        className={`absolute right-0 mt-2 w-60 origin-top-right rounded-2xl border border-[color:var(--mm-primary)]/25 bg-[rgba(9,9,11,0.72)] p-2 backdrop-blur-xl shadow-[0_0_0_1px_rgba(250,204,21,0.06)] transition-all duration-300 ${
+        className={`absolute right-0 mt-2 w-60 origin-top-right rounded-2xl border p-2 shadow-2xl transition-all duration-300 ${
           open ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
-        }`}
+        } bg-white text-zinc-900 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800`}
         role="menu"
         aria-hidden={!open}
       >
+
         <Link
           href="/profile"
           onClick={() => setOpen(false)}
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--mm-text)]/90 hover:bg-black/30 transition-all"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+
           role="menuitem"
         >
-          <span className="grid size-9 place-items-center rounded-xl bg-[color:rgba(250,204,21,0.10)] border border-[color:var(--mm-primary)]/25 text-[color:var(--mm-primary)]">
+          <span className="grid size-9 place-items-center rounded-xl border border-yellow-400/30 bg-yellow-400/10 text-zinc-700 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100">
             <UserRound size={18} />
           </span>
+
           <span>Profile</span>
         </Link>
 
@@ -77,18 +82,21 @@ export default function ProfileDropdown({ userName = "User" }: Props) {
             setOpen(false);
             router.push("/settings");
           }}
-          className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--mm-text)]/90 hover:bg-black/30 transition-all"
+          className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+
           role="menuitem"
         >
-          <span className="grid size-9 place-items-center rounded-xl bg-[color:rgba(250,204,21,0.10)] border border-[color:var(--mm-primary)]/25 text-[color:var(--mm-primary)]">
-            <Settings size={18} />
-          </span>
-          <span>Settings</span>
+            <span className="grid size-9 place-items-center rounded-xl border border-yellow-400/30 bg-yellow-400/10 text-zinc-700 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100">
+              <Settings size={18} />
+            </span>
+            <span className="text-zinc-900 dark:text-zinc-100">Settings</span>
+
         </button>
 
-        <div className="mt-2 px-3 pt-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--mm-secondary)]">
+        <div className="mt-2 px-3 pt-2 text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-100">
           Theme
         </div>
+
 
         {options.map(({ key, label, Icon }) => (
           <button
@@ -97,13 +105,25 @@ export default function ProfileDropdown({ userName = "User" }: Props) {
             onClick={() => setTheme(key)}
             className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
               theme === key
-                ? "bg-black/30 text-[var(--mm-text)] border border-[color:var(--mm-primary)]/25"
-                : "text-[var(--mm-text)]/90 hover:bg-black/30"
-            }`}
+                ? "bg-yellow-400 text-black"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+            } hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800`}
+
+
             role="menuitem"
           >
-            <Icon size={18} className={theme === key ? "text-[var(--mm-primary)]" : "text-[var(--mm-secondary)]"} />
-            <span>{label}</span>
+            <Icon
+              size={18}
+              className={
+                theme === key
+                  ? "text-black dark:text-black"
+                  : "text-zinc-700 dark:text-zinc-100"
+              }
+            />
+            <span className={theme === key ? "text-black dark:text-black" : "text-zinc-700 dark:text-zinc-100"}>
+              {label}
+            </span>
+
             {key === resolvedTheme && theme === "system" ? (
               <span className="ml-auto text-[11px] font-bold text-[var(--mm-primary)]">Active</span>
             ) : null}

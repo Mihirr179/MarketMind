@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import GlassCard from "@/components/ui/GlassCard";
 import Sparkline from "@/components/ui/Sparkline";
+import { useChartState } from "./ChartStateContext";
 
 type WatchlistItem = {
   symbol: string;
@@ -34,7 +35,9 @@ function tone(changePercent?: number) {
 }
 
 export default function WatchlistPanel() {
+  const { setSymbol } = useChartState();
   const [items, setItems] = useState<WatchlistItem[]>([]);
+
 
   useEffect(() => {
     try {
@@ -122,11 +125,18 @@ export default function WatchlistPanel() {
             return (
               <div
                 key={stock.symbol}
-                className={`group flex items-center justify-between gap-3 rounded-2xl border bg-black/20 px-3 py-3 transition ${
+                className={`group flex items-center justify-between gap-3 rounded-2xl border bg-black/20 px-3 py-3 transition cursor-pointer ${
                   dragSymbol === stock.symbol
                     ? "border-[#FACC15]/60"
                     : "border-[#27272A]/60 hover:border-[#FACC15]/40"
                 }`}
+                role="button"
+                tabIndex={0}
+                aria-label={`Set chart symbol to ${stock.symbol}`}
+                onClick={() => setSymbol(stock.symbol)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") setSymbol(stock.symbol);
+                }}
                 draggable
                 onDragStart={() => setDragSymbol(stock.symbol)}
                 onDragOver={(e) => e.preventDefault()}

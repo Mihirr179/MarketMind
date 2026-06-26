@@ -1,32 +1,37 @@
-# MarketMind Refactor - Theme + Profile Dropdown
+# MarketMind - TODO (Settings Redesigyen)
 
-## Step 1 — Theme system foundation
-- [ ] Add ThemeContext (React Context) with localStorage persistence
-- [ ] Implement default theme = Dark and resolve `system` mode
-- [ ] Update `app/layout.tsx` / `LayoutShell.tsx` / global wrappers to apply theme classes
-- [ ] Refactor `app/globals.css` to use theme variables for both Dark and Light
+## Step 1: Layout foundation (two-column)
+- Create fixed left sidebar (300px) with premium glassmorphism cards.
+- Create right content panel area that fills remaining width up to 1400px max.
 
-## Step 2 — Profile dropdown + remove duplicate profile/logout
-- [ ] Create `components/ui/ProfileDropdown.tsx` (glassmorphism card, yellow accent, animation)
-- [ ] Update `components/TopNavbar.tsx` to remove standalone logout and use the dropdown
-- [ ] Refactor `components/dashboard/TerminalTopNav.tsx` to avoid duplicate profile section if applicable
+## Step 2: Conditional section rendering
+- Add state for currently selected settings category (based on `SettingsSectionKey`).
+- Render ONLY the selected category; hide all others.
+- Add Framer Motion transitions between panels.
 
-## Step 3 — Settings page spec
-- [ ] Update `app/settings/page.tsx` appearance section: Dark / Light / System
-- [ ] Add UI preferences: Compact / Expanded
-- [ ] Persist all settings in localStorage
+## Step 3: Sidebar interaction UX
+- Gold hover border + active highlight.
+- Smooth sidebar item animations.
+- Ensure keyboard accessibility (buttons).
 
-## Step 4 — Apply theme across app
-- [ ] Update core UI components (Sidebar, GlassCard, inputs/buttons) to use theme variables
-- [ ] Update dashboard components: Watchlist, Portfolio, Search, News, AI Research, charts/tables/modals/dropdowns
+## Step 4: Reuse existing settings logic
+- Do not remove existing functionality.
+- Reuse current form controls (`SelectChips`, `Toggle`, `TextInput`, `Modal`, `ConfirmDialog`).
 
-## Step 5 — Polish
-- [ ] Add smooth transitions for theme switching and hover states
-- [ ] Run lint/build and fix any TS/Next issues
+## Step 5: Section content mapping
+- Profile panel
+- Appearance panel
+- Trading panel
+- AI panel
+- Notifications panel
+- Security panel
+- Privacy/Data panel
+- About panel
 
-## Step 6 — Verify requirements
-- [ ] Only one profile area exists
-- [ ] Logout inside profile dropdown only
-- [ ] Theme persists after refresh
-- [ ] Theme toggle switches entire application
+## Step 6: Validate
+- Run TypeScript check / lint (if available).
+- Manually verify no crashes and that toggles/chips persist.
+
+✅ Step 0-5: Implemented two-column layout + conditional rendering (requested section only visible) with premium fixed sidebar.
+
 

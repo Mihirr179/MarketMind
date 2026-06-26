@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import LiveChart from "@/components/LiveChart";
+import TradingTerminalChart from "@/components/dashboard/TradingTerminalChart";
+import { ChartStateProvider } from "@/components/dashboard/ChartStateContext";
 import TerminalTopNav from "@/components/dashboard/TerminalTopNav";
 import MarketOverviewContainer from "@/components/dashboard/MarketOverviewContainer";
 import WatchlistPanel from "@/components/dashboard/WatchlistPanel";
@@ -134,41 +135,43 @@ export default function Dashboard() {
         </div>
 
         {/* Main grid */}
-        <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            {/* Trading Terminal */}
-            <LiveChart defaultSymbol="SPY" fetchChartUrl="/api/market-chart" />
+        <ChartStateProvider>
+          <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 space-y-4">
+              {/* Trading Terminal */}
+              <TradingTerminalChart />
 
-            {/* Market Movers */}
-            {marketLoading ? (
-              <GlassCard className="p-5">
-                <SkeletonBlock className="h-72 w-full" />
-              </GlassCard>
-            ) : (
-              <MarketMovers rows={marketRows as unknown as Array<{symbol: string; company?: string; price: number | null; changePercent: number | null; changeAbs: number | null}>} />
-            )}
+              {/* Market Movers */}
+              {marketLoading ? (
+                <GlassCard className="p-5">
+                  <SkeletonBlock className="h-72 w-full" />
+                </GlassCard>
+              ) : (
+                <MarketMovers rows={marketRows as unknown as Array<{symbol: string; company?: string; price: number | null; changePercent: number | null; changeAbs: number | null}>} />
+              )}
+            </div>
+
+            <div className="space-y-4">
+              {/* Watchlist */}
+              <WatchlistPanel />
+
+              {/* AI Research */}
+              <AiResearchCard symbol="SPY" confidence={86} risk="Medium" />
+
+              {/* Portfolio */}
+              <PortfolioPanel />
+
+              {/* News */}
+              {newsLoading ? (
+                <GlassCard className="p-5">
+                  <SkeletonBlock className="h-96 w-full" />
+                </GlassCard>
+              ) : (
+                <NewsSection items={news as unknown as Array<{title: string; source?: {id?: string; name?: string}}>} />
+              )}
+            </div>
           </div>
-
-          <div className="space-y-4">
-            {/* Watchlist */}
-            <WatchlistPanel />
-
-            {/* AI Research */}
-            <AiResearchCard symbol="SPY" confidence={86} risk="Medium" />
-
-            {/* Portfolio */}
-            <PortfolioPanel />
-
-            {/* News */}
-            {newsLoading ? (
-              <GlassCard className="p-5">
-                <SkeletonBlock className="h-96 w-full" />
-              </GlassCard>
-            ) : (
-              <NewsSection items={news as unknown as Array<{title: string; source?: {id?: string; name?: string}}>} />
-            )}
-          </div>
-        </div>
+        </ChartStateProvider>
 
         <AiChatWidget />
       </div>

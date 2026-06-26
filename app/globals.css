@@ -1,39 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  /* Default theme = dark */
-  --mm-background: #09090B;
-  --mm-card: #111827;
-  --mm-border: #27272A;
-  --mm-primary: #FACC15;
-  --mm-text: #FFFFFF;
-  --mm-secondary: #A1A1AA;
+  --bg: #ffffff;
+  --card: #f8fafc;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
 
-  --mm-success: #10B981;
-  --mm-danger: #EF4444;
+  /* MarketMind primary accent */
+  --accent: #facc15;
+  --mm-accent: #facc15;
+
+  /* Settings-specific tokens */
+  --mm-card-pad: 24px;
+  --mm-row-gap: 12px;
+  --mm-font-scale: 1;
 }
 
-html[data-theme="light"] {
-  --mm-background: #F8FAFC;
-  --mm-card: #FFFFFF;
-  --mm-border: #E5E7EB;
-  --mm-primary: #EAB308;
-  --mm-text: #111827;
-  --mm-secondary: #6B7280;
+.dark {
+  --bg: #09090b;
+  --card: #18181b;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --border: #27272a;
+  --accent: #facc15;
+  --mm-accent: #facc15;
+}
 
-  --mm-success: #10B981;
-  --mm-danger: #DC2626;
+html {
+  font-size: 16px;
 }
 
 body {
-  background: var(--mm-background);
-  color: var(--mm-text);
+  font-size: calc(16px * var(--mm-font-scale));
+}
+
+
+
+body {
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
 
+
 /* Premium scrollbar */
 *::-webkit-scrollbar {
+
   height: 10px;
   width: 10px;
 }
