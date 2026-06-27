@@ -10,10 +10,15 @@ type MarketRow = {
   changeAbs: number | null;
 };
 
-export default function MarketOverviewContainer() {
+export default function MarketOverviewContainer({
+  symbol,
+}: {
+  symbol?: string;
+}) {
   const [rows, setRows] = useState<
     Record<string, { price?: number | null; changePercent?: number | null }>
   >({});
+
 
   useEffect(() => {
     let cancelled = false;
@@ -22,7 +27,10 @@ export default function MarketOverviewContainer() {
       try {
         // If your /api/market doesn\'t support index/crypto tickers,
         // the strip will still render with skeleton-like values.
-        const symbols = "SPY,QQQ,DIA,^NSEI,^BSESN,BTC-USD,ETH-USD";
+        const symbols = symbol
+          ? `${symbol},SPY,QQQ,DIA,BTC-USD,ETH-USD`
+          : "SPY,QQQ,DIA,^NSEI,^BSESN,BTC-USD,ETH-USD";
+
         const res = await fetch(`/api/market?symbols=${encodeURIComponent(symbols)}`);
         const data = (await res.json()) as MarketRow[];
         if (cancelled) return;

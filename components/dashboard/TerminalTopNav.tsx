@@ -2,6 +2,8 @@
 
 import { Bell, Settings, Search, UserRound, Globe, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import SearchAutocomplete from "@/components/ui/SearchAutocomplete";
+
 import { useEffect, useMemo, useState } from "react";
 
 export default function TerminalTopNav() {
@@ -63,27 +65,21 @@ export default function TerminalTopNav() {
           </div>
         </Link>
 
-        {/* Global Search */}
-        <form
-          className="relative hidden md:flex flex-1 items-center"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const q = search.trim().toUpperCase();
-            if (!q) return;
-            // Keep it non-breaking: navigate via existing search route.
-            window.location.href = `/search?symbol=${encodeURIComponent(q)}`;
-          }}
-        >
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-          <input
+        {/* Global Search (TradingView-like) */}
+        <div className="relative hidden md:flex flex-1 items-center">
+          <SearchAutocomplete
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search symbol (AAPL, TSLA, BTC...)"
-            className="w-full rounded-xl border border-[#27272A] bg-[#18181B]/50 py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-[#FACC15]/60 focus:ring-2 focus:ring-[#FACC15]/15"
+            onChange={setSearch}
+            placeholder="Search (AAPL, Reliance, BTC...)"
+            onSelect={(item) => {
+              const nextSymbol = item.symbol.toUpperCase();
+              window.location.href = `/dashboard?symbol=${encodeURIComponent(nextSymbol)}`;
+            }}
           />
-        </form>
+        </div>
 
         {/* Market Status */}
+
         <div className="hidden lg:flex items-center gap-3">
           <div className="flex items-center gap-2 rounded-xl border border-[#27272A] bg-[#18181B]/40 px-3 py-2">
             <Globe size={16} className="text-zinc-400" />

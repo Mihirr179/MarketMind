@@ -13,11 +13,13 @@ import MarketMovers from "@/components/dashboard/MarketMovers";
 import AiChatWidget from "@/components/dashboard/AiChatWidget";
 import GlassCard from "@/components/ui/GlassCard";
 import { SkeletonBlock } from "@/components/ui/Skeleton";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 
 export default function Dashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
 
   type User = {
     name: string;
@@ -114,6 +116,7 @@ export default function Dashboard() {
 
         <div className="mt-4">
           <GlassCard className="p-5 mb-5">
+
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <div className="text-xs text-zinc-500 font-medium">Welcome Back</div>
@@ -131,11 +134,13 @@ export default function Dashboard() {
             </div>
           </GlassCard>
 
-          <MarketOverviewContainer />
+          <MarketOverviewContainer symbol={(searchParams.get("symbol") || "SPY").toUpperCase()} />
+
         </div>
 
         {/* Main grid */}
-        <ChartStateProvider>
+        <ChartStateProvider initialSymbol={(searchParams.get("symbol") || "SPY").toUpperCase()}>
+
           <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 space-y-4">
               {/* Trading Terminal */}
@@ -156,7 +161,8 @@ export default function Dashboard() {
               <WatchlistPanel />
 
               {/* AI Research */}
-              <AiResearchCard symbol="SPY" confidence={86} risk="Medium" />
+              <AiResearchCard symbol={(searchParams.get("symbol") || "SPY").toUpperCase()} confidence={86} risk="Medium" />
+
 
               {/* Portfolio */}
               <PortfolioPanel />

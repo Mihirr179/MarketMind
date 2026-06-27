@@ -46,7 +46,7 @@ export default function SearchPage() {
 
     try {
       const res = await fetch(
-        `/api/search?symbol=${symbol.toUpperCase()}`
+        `/api/search?symbol=${encodeURIComponent(symbol.toUpperCase())}&q=${encodeURIComponent(symbol)}`
       );
 
       const data = await res.json();

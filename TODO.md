@@ -1,37 +1,15 @@
-# MarketMind - TODO (Settings Redesigyen)
+# TODO - MarketMind TradingView-like Search Upgrade
 
-## Step 1: Layout foundation (two-column)
-- Create fixed left sidebar (300px) with premium glassmorphism cards.
-- Create right content panel area that fills remaining width up to 1400px max.
+- [x] Implement SearchAutocomplete reusable component (premium dark TradingView-like UI)
 
-## Step 2: Conditional section rendering
-- Add state for currently selected settings category (based on `SettingsSectionKey`).
-- Render ONLY the selected category; hide all others.
-- Add Framer Motion transitions between panels.
+- [ ] Add search universe catalog (Nifty 50, Nifty Next 50, major US, ETFs, BTC/ETH) with logos when available
+- [ ] Add backend API endpoint `/api/search-autocomplete` for intelligent matching (name partial, symbol, case-insensitive)
+- [x] Replace exact-match search in `TerminalTopNav` with autocomplete dropdown
 
-## Step 3: Sidebar interaction UX
-- Gold hover border + active highlight.
-- Smooth sidebar item animations.
-- Ensure keyboard accessibility (buttons).
+- [x] Add debounce (300ms), caching, loading spinner, empty state (no alert)
 
-## Step 4: Reuse existing settings logic
-- Do not remove existing functionality.
-- Reuse current form controls (`SelectChips`, `Toggle`, `TextInput`, `Modal`, `ConfirmDialog`).
-
-## Step 5: Section content mapping
-- Profile panel
-- Appearance panel
-- Trading panel
-- AI panel
-- Notifications panel
-- Security panel
-- Privacy/Data panel
-- About panel
-
-## Step 6: Validate
-- Run TypeScript check / lint (if available).
-- Manually verify no crashes and that toggles/chips persist.
-
-✅ Step 0-5: Implemented two-column layout + conditional rendering (requested section only visible) with premium fixed sidebar.
-
+- [ ] Add keyboard navigation (ArrowUp/ArrowDown/Enter)
+- [ ] On selection, load chart + market data + AI analysis by driving `ChartStateContext` symbol
+- [ ] Sync Dashboard render: `AiResearchCard` should receive selected symbol; `MarketOverviewContainer` should query selected symbol
+- [ ] Summarize all modified files
 
