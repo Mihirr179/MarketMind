@@ -1,16 +1,15 @@
 "use client";
 
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "recharts";
-
 import { useState } from "react";
-import Link from "next/link";
+
+import SearchHero from "../../components/search/SearchHero";
+import PriceCards from "../../components/search/PriceCards";
+import ChartCard from "../../components/search/ChartCard";
+import CompanyProfile from "../../components/search/CompanyProfile";
+import TechnicalCard from "../../components/search/TechnicalCard";
+import AIPlaceholder from "../../components/search/AIPlaceholder";
+import NewsPlaceholder from "../../components/search/NewsPlaceholder";
+import Skeleton from "../../components/search/Skeleton";
 
 export default function SearchPage() {
   const [symbol, setSymbol] = useState("");
@@ -28,16 +27,6 @@ export default function SearchPage() {
 
   const [stock, setStock] = useState<StockState | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const chartData = [
-    { day: "Mon", price: 180 },
-    { day: "Tue", price: 185 },
-    { day: "Wed", price: 182 },
-    { day: "Thu", price: 190 },
-    { day: "Fri", price: 195 },
-    { day: "Sat", price: 193 },
-    { day: "Sun", price: 200 },
-  ];
 
   const handleSearch = async () => {
     if (!symbol) return;
@@ -100,168 +89,81 @@ export default function SearchPage() {
 
     existing.push(stock);
 
-    localStorage.setItem(
-      "watchlist",
-      JSON.stringify(existing)
-    );
+    localStorage.setItem("watchlist", JSON.stringify(existing));
 
     alert("Added to Watchlist ⭐");
   };
 
   return (
-    <main className="min-h-screen bg-black text-white p-8">
-     
+    <main className="min-h-screen bg-black text-white p-6 sm:p-8">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl sm:text-5xl font-bold text-[#FACC15] mb-8 sm:mb-10">
+          Stock Research
+        </h1>
 
-      {/* Heading */}
-      <h1 className="text-5xl font-bold text-yellow-400 mb-10">
-        Stock Search
-      </h1>
+        <div className="flex gap-4 mb-8 sm:mb-10">
+          <input
+            type="text"
+            placeholder="Enter Stock Symbol (AAPL)"
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            className="bg-zinc-900 border border-zinc-700 rounded-xl px-5 py-4 flex-1 text-lg focus:outline-none focus:border-[#FACC15]"
+          />
 
-      {/* Search Bar */}
-      <div className="flex gap-4 mb-10 max-w-4xl">
-        <input
-          type="text"
-          placeholder="Enter Stock Symbol (AAPL)"
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded-xl px-5 py-4 flex-1 text-lg focus:outline-none focus:border-yellow-400"
-        />
-
-        <button
-          onClick={handleSearch}
-          className="bg-yellow-400 text-black px-8 py-4 rounded-xl font-bold hover:bg-yellow-300 transition"
-        >
-          {loading ? "Loading..." : "Search"}
-        </button>
-      </div>
-
-      {/* Stock Result */}
-      {stock && (
-        <div className="w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-xl">
-          {/* Header */}
-          <div className="flex justify-between items-start mb-10">
-            <div>
-              <h2 className="text-7xl font-bold text-yellow-400">
-                {stock.symbol}
-              </h2>
-
-              <p className="text-5xl font-bold text-green-400 mt-3">
-                ${stock.price}
-              </p>
-            </div>
-
-            <div className="text-right">
-              <p className="text-zinc-400 text-lg">
-                Confidence
-              </p>
-
-              <p className="text-green-400 text-6xl font-bold">
-                {stock.confidence}%
-              </p>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-zinc-800 rounded-2xl p-5">
-              <p className="text-zinc-400 text-sm">Open</p>
-              <p className="text-2xl font-semibold mt-2">
-                {stock.open}
-              </p>
-            </div>
-
-            <div className="bg-zinc-800 rounded-2xl p-5">
-              <p className="text-zinc-400 text-sm">
-                Previous Close
-              </p>
-              <p className="text-2xl font-semibold mt-2">
-                {stock.previousClose}
-              </p>
-            </div>
-
-            <div className="bg-zinc-800 rounded-2xl p-5">
-              <p className="text-zinc-400 text-sm">High</p>
-              <p className="text-2xl font-semibold mt-2">
-                {stock.high}
-              </p>
-            </div>
-
-            <div className="bg-zinc-800 rounded-2xl p-5">
-              <p className="text-zinc-400 text-sm">Low</p>
-              <p className="text-2xl font-semibold mt-2">
-                {stock.low}
-              </p>
-            </div>
-          </div>
-
-          {/* Recommendation */}
-          <div className="grid md:grid-cols-2 gap-6 mt-8">
-            <div className="bg-zinc-800 rounded-2xl p-6">
-              <p className="text-zinc-400 mb-3">
-                Recommendation
-              </p>
-
-              <span
-                className={`px-5 py-2 rounded-full font-bold text-lg ${
-                  stock.recommendation === "BUY"
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-red-500/20 text-red-400"
-                }`}
-              >
-                {stock.recommendation}
-              </span>
-            </div>
-
-            <div className="bg-zinc-800 rounded-2xl p-6">
-              <p className="text-zinc-400 mb-3">
-                Change %
-              </p>
-
-              <p
-                className={`text-3xl font-bold ${
-                  String(stock.changePercent ?? "").includes("-")
-                    ? "text-red-400"
-                    : "text-green-400"
-                }`}
-              >
-                {stock.changePercent}
-              </p>
-            </div>
-          </div>
-
-          {/* Chart */}
-          <div className="mt-10">
-            <h3 className="text-2xl font-bold text-yellow-400 mb-4">
-              7-Day Price Trend
-            </h3>
-
-            <div className="bg-zinc-800 p-4 rounded-2xl">
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
-                  <XAxis dataKey="day" />
-                  <YAxis />
-                  <Tooltip />
-
-                  <Line
-                    type="monotone"
-                    dataKey="price"
-                    stroke="#facc15"
-                    strokeWidth={3}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Watchlist Button */}
           <button
-            onClick={addToWatchlist}
-            className="mt-8 bg-yellow-400 text-black px-8 py-4 rounded-xl font-bold text-lg hover:bg-yellow-300 transition"
+            onClick={handleSearch}
+            className="bg-[#FACC15] text-black px-6 sm:px-8 py-4 rounded-xl font-bold hover:bg-yellow-300 transition"
           >
-            ⭐ Add To Watchlist
+            {loading ? "Loading..." : "Search"}
           </button>
         </div>
-      )}
+
+        {!stock && !loading && (
+          <div className="w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-xl">
+            <h2 className="text-2xl font-bold text-[#FACC15]">No Stock Selected</h2>
+            <p className="text-zinc-300 mt-2">
+              Search any stock to begin.
+            </p>
+          </div>
+        )}
+
+        {loading && <Skeleton />}
+
+        {stock && (
+          <div className="w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+            <SearchHero
+              stock={stock}
+              onAddToWatchlist={addToWatchlist}
+              onAiAnalysis={() => {
+                // Placeholder: AI analysis is UI-only per requirements.
+              }}
+            />
+
+            <PriceCards stock={stock} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <ChartCard stock={{ symbol: stock.symbol }} />
+              </div>
+              <div>
+                <CompanyProfile stock={{ symbol: stock.symbol }} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                <TechnicalCard stock={stock} />
+              </div>
+              <div className="lg:col-span-2">
+                <AIPlaceholder />
+              </div>
+            </div>
+
+            <NewsPlaceholder />
+          </div>
+        )}
+      </div>
     </main>
   );
 }
+
