@@ -4,16 +4,22 @@ import { useEffect, useState } from "react";
 import TradingTerminalChart from "@/components/dashboard/TradingTerminalChart";
 import { ChartStateProvider } from "@/components/dashboard/ChartStateContext";
 import TerminalTopNav from "@/components/dashboard/TerminalTopNav";
-import MarketOverviewContainer from "@/components/dashboard/MarketOverviewContainer";
 import WatchlistPanel from "@/components/dashboard/WatchlistPanel";
 import AiResearchCard from "@/components/dashboard/AiResearchCard";
 import PortfolioPanel from "@/components/dashboard/PortfolioPanel";
-import NewsSection from "@/components/dashboard/NewsSection";
+
 import MarketMovers from "@/components/dashboard/MarketMovers";
 import AiChatWidget from "@/components/dashboard/AiChatWidget";
 import GlassCard from "@/components/ui/GlassCard";
 import { SkeletonBlock } from "@/components/ui/Skeleton";
 import { useRouter, useSearchParams } from "next/navigation";
+
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import TerminalMetricCards from "@/components/dashboard/TerminalMetricCards";
+import GlobalMarketsGrid from "@/components/dashboard/GlobalMarketsGrid";
+import TrendingStocksCard from "@/components/dashboard/TrendingStocksCard";
+import LatestNewsGrid from "@/components/dashboard/LatestNewsGrid";
+
 
 
 export default function Dashboard() {
@@ -115,73 +121,86 @@ export default function Dashboard() {
         <TerminalTopNav />
 
         <div className="mt-4">
-          <GlassCard className="p-5 mb-5">
-
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div>
-                <div className="text-xs text-zinc-500 font-medium">Welcome Back</div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-[#FACC15] mt-1">
-                  {user?.name || "Investor"}
-                </h1>
-                <p className="text-sm text-zinc-400 mt-1">
-                  Real-time terminal view with professional analytics.
-                </p>
-              </div>
-              <div className="text-sm text-zinc-500">
-                <span className="font-semibold text-white/90">MarketMind</span> •
-                <span className="ml-2 text-[#FACC15] font-bold">Premium Mode</span>
-              </div>
-            </div>
-          </GlassCard>
-
-          <MarketOverviewContainer symbol={(searchParams.get("symbol") || "SPY").toUpperCase()} />
-
-        </div>
-
-        {/* Main grid */}
-        <ChartStateProvider initialSymbol={(searchParams.get("symbol") || "SPY").toUpperCase()}>
-
-          <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 space-y-4">
-              {/* Trading Terminal */}
-              <TradingTerminalChart />
-
-              {/* Market Movers */}
-              {marketLoading ? (
-                <GlassCard className="p-5">
-                  <SkeletonBlock className="h-72 w-full" />
-                </GlassCard>
-              ) : (
-                <MarketMovers rows={marketRows as unknown as Array<{symbol: string; company?: string; price: number | null; changePercent: number | null; changeAbs: number | null}>} />
-              )}
-            </div>
-
-            <div className="space-y-4">
-              {/* Watchlist */}
-              <WatchlistPanel />
-
-              {/* AI Research */}
-              <AiResearchCard symbol={(searchParams.get("symbol") || "SPY").toUpperCase()} confidence={86} risk="Medium" />
+          <DashboardHeader />
 
 
-              {/* Portfolio */}
-              <PortfolioPanel />
-
-              {/* News */}
-              {newsLoading ? (
-                <GlassCard className="p-5">
-                  <SkeletonBlock className="h-96 w-full" />
-                </GlassCard>
-              ) : (
-                <NewsSection items={news as unknown as Array<{title: string; source?: {id?: string; name?: string}}>} />
-              )}
-            </div>
+          {/* Row 1: Terminal metric cards */}
+          <div className="mt-4">
+            <TerminalMetricCards />
           </div>
-        </ChartStateProvider>
 
-        <AiChatWidget />
+          {/* Row 2: Global Markets */}
+          <div className="mt-4">
+            <GlobalMarketsGrid />
+          </div>
+
+          {/* Terminal main area (keeps existing chart / movers logic) */}
+          <div className="mt-4">
+            <ChartStateProvider initialSymbol={(searchParams.get("symbol") || "SPY").toUpperCase()}>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 space-y-4">
+                  {/* Trading Terminal */}
+                  <TradingTerminalChart />
+
+                  {/* Market Movers (kept for continuity; premium terminal vibe) */}
+                  {marketLoading ? (
+                    <GlassCard className="p-5">
+                      <SkeletonBlock className="h-72 w-full" />
+                    </GlassCard>
+                  ) : (
+                    <MarketMovers
+                      rows={marketRows as unknown as Array<{
+                        symbol: string;
+                        company?: string;
+                        price: number | null;
+                        changePercent: number | null;
+                        changeAbs: number | null;
+                      }>}
+                    />
+                  )}
+                </div>
+
+                {/* Row 3 right column (30%): Trending Stocks */}
+                <div className="space-y-4">
+                  <WatchlistPanel />
+
+                  <TrendingStocksCard />
+
+                  {/* Keep existing portfolio + AI research so dashboard remains feature-complete */}
+                  <AiResearchCard
+                    symbol={(searchParams.get("symbol") || "SPY").toUpperCase()}
+                    confidence={86}
+                    risk="Medium"
+                  />
+                  <PortfolioPanel />
+                </div>
+              </div>
+            </ChartStateProvider>
+          </div>
+
+          {/* Row 4: Latest Market News (reuse existing news UI) */}
+          <div className="mt-4">
+            {newsLoading ? (
+              <GlassCard className="p-5">
+                <SkeletonBlock className="h-96 w-full" />
+              </GlassCard>
+            ) : (
+              <LatestNewsGrid
+                items={news as unknown as Array<{
+                  title: string;
+                  source?: { id?: string; name?: string };
+                }>}
+                loading={false}
+              />
+            )}
+          </div>
+
+          <AiChatWidget />
+        </div>
       </div>
     </main>
   );
 }
+
+
 
