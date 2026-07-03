@@ -7,7 +7,7 @@ import PriceCards from "../../components/search/PriceCards";
 import ChartCard from "../../components/search/ChartCard";
 import CompanyProfile from "../../components/search/CompanyProfile";
 import TechnicalCard from "../../components/search/TechnicalCard";
-import AIPlaceholder from "../../components/search/AIPlaceholder";
+import AIAnalysisCard from "../../components/search/AIAnalysisCard";
 import NewsPlaceholder from "../../components/search/NewsPlaceholder";
 import Skeleton from "../../components/search/Skeleton";
 
@@ -96,7 +96,7 @@ export default function SearchPage() {
 
   return (
     <main className="min-h-screen bg-black text-white p-6 sm:p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-[1600px] w-full mx-auto px-2 sm:px-4">
         <h1 className="text-4xl sm:text-5xl font-bold text-[#FACC15] mb-8 sm:mb-10">
           Stock Research
         </h1>
@@ -135,27 +135,27 @@ export default function SearchPage() {
               stock={stock}
               onAddToWatchlist={addToWatchlist}
               onAiAnalysis={() => {
-                // Placeholder: AI analysis is UI-only per requirements.
+                // AI handled inside AIAnalysisCard
               }}
             />
 
             <PriceCards stock={stock} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+              <div className="lg:col-span-7">
                 <ChartCard stock={{ symbol: stock.symbol }} />
               </div>
-              <div>
+              <div className="lg:col-span-3">
                 <CompanyProfile stock={{ symbol: stock.symbol }} />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1">
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+              <div className="lg:col-span-3">
                 <TechnicalCard stock={stock} />
               </div>
-              <div className="lg:col-span-2">
-                <AIPlaceholder />
+              <div className="lg:col-span-7">
+                <AIAnalysisCard stock={stock} />
               </div>
             </div>
 
