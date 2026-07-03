@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
+
 import TradingTerminalChart from "@/components/dashboard/TradingTerminalChart";
+
 import { ChartStateProvider } from "@/components/dashboard/ChartStateContext";
 import TerminalTopNav from "@/components/dashboard/TerminalTopNav";
 import WatchlistPanel from "@/components/dashboard/WatchlistPanel";
@@ -12,22 +14,19 @@ import MarketMovers from "@/components/dashboard/MarketMovers";
 import AiChatWidget from "@/components/dashboard/AiChatWidget";
 import GlassCard from "@/components/ui/GlassCard";
 import { SkeletonBlock } from "@/components/ui/Skeleton";
-import { useRouter, useSearchParams } from "next/navigation";
-
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import TerminalMetricCards from "@/components/dashboard/TerminalMetricCards";
 import GlobalMarketsGrid from "@/components/dashboard/GlobalMarketsGrid";
 import TrendingStocksCard from "@/components/dashboard/TrendingStocksCard";
 import LatestNewsGrid from "@/components/dashboard/LatestNewsGrid";
 
+import { useRouter } from "next/navigation";
 
-
-export default function Dashboard() {
+function DashboardContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
 
   type User = {
+
     name: string;
     email: string;
   };
@@ -53,6 +52,14 @@ export default function Dashboard() {
   const [marketRows, setMarketRows] = useState<MarketRow[]>([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [marketLoading, setMarketLoading] = useState(true);
+  const [selectedSymbol, setSelectedSymbol] = useState("SPY");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const symbol = params.get("symbol") || "SPY";
+    setSelectedSymbol(symbol.toUpperCase());
+  }, []);
+
 
   useEffect(() => {
     const init = () => {
@@ -123,26 +130,22 @@ export default function Dashboard() {
         <div className="mt-4">
           <DashboardHeader />
 
-
-          {/* Row 1: Terminal metric cards */}
           <div className="mt-4">
             <TerminalMetricCards />
           </div>
 
-          {/* Row 2: Global Markets */}
           <div className="mt-4">
             <GlobalMarketsGrid />
           </div>
 
-          {/* Terminal main area (keeps existing chart / movers logic) */}
           <div className="mt-4">
-            <ChartStateProvider initialSymbol={(searchParams.get("symbol") || "SPY").toUpperCase()}>
+            <ChartStateProvider
+              initialSymbol={selectedSymbol}
+            >
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 space-y-4">
-                  {/* Trading Terminal */}
                   <TradingTerminalChart />
 
-                  {/* Market Movers (kept for continuity; premium terminal vibe) */}
                   {marketLoading ? (
                     <GlassCard className="p-5">
                       <SkeletonBlock className="h-72 w-full" />
@@ -160,15 +163,12 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {/* Row 3 right column (30%): Trending Stocks */}
                 <div className="space-y-4">
                   <WatchlistPanel />
-
                   <TrendingStocksCard />
 
-                  {/* Keep existing portfolio + AI research so dashboard remains feature-complete */}
                   <AiResearchCard
-                    symbol={(searchParams.get("symbol") || "SPY").toUpperCase()}
+                    symbol={selectedSymbol}
                     confidence={86}
                     risk="Medium"
                   />
@@ -178,7 +178,6 @@ export default function Dashboard() {
             </ChartStateProvider>
           </div>
 
-          {/* Row 4: Latest Market News (reuse existing news UI) */}
           <div className="mt-4">
             {newsLoading ? (
               <GlassCard className="p-5">
@@ -202,5 +201,11 @@ export default function Dashboard() {
   );
 }
 
-
+export default function Dashboard() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
 
