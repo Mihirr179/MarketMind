@@ -35,36 +35,60 @@ export default function AiChatWidget() {
     localStorage.setItem("mm_ai_widget_open", String(open));
   }, [open]);
 
-  const generateDemoResponse = (q: string) => {
-    const normalized = q.toLowerCase();
-    if (normalized.includes("explain")) {
-      return "Movement explained: momentum increased with higher participation while volatility remained controlled. Consider support levels and confirm with volume trend.";
-    }
-    if (normalized.includes("portfolio")) {
-      return "Portfolio analysis: concentration risk is moderate. Diversify across sectors and rebalance toward higher risk-adjusted return while keeping drawdown limits in view.";
-    }
-    return "Suggestion: focus on setups with improving trend strength and favorable risk/reward. Use staged entries and define exit rules before execution.";
-  };
-
   const send = async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed || loading) return;
+  const trimmed = text.trim();
+  if (!trimmed || loading) return;
 
-    setMessages((prev) => [...prev, { role: "user", text: trimmed }]);
-    setInput("");
-    setLoading(true);
+  const updatedMessages = [
+    ...messages,
+    { role: "user" as const, text: trimmed },
+  ];
 
-    // No breaking API assumption: keep demo-only behavior.
-    // If you add an AI endpoint later, replace this block.
-    await new Promise((r) => setTimeout(r, 650));
+  setMessages(updatedMessages);
+  setInput("");
+  setLoading(true);
+
+  try {
+    const apiMessages = updatedMessages.map((m) => ({
+      role: m.role === "ai" ? "assistant" : "user",
+      content: m.text,
+    }));
+
+    const res = await fetch("/api/ai-chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: apiMessages,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      throw new Error(data.error || "Request failed");
+    }
 
     setMessages((prev) => [
       ...prev,
-      { role: "ai", text: generateDemoResponse(trimmed) },
+      {
+        role: "ai",
+        text: data.reply,
+      },
     ]);
+  } catch (err: any) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "ai",
+        text: `Couldn't reach MarketMind AI.\n${err.message}`,
+      },
+    ]);
+  } finally {
     setLoading(false);
-  };
-
+  }
+};
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {open ? (
