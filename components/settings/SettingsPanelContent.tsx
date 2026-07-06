@@ -11,10 +11,11 @@ import {
   Modal,
   SelectChips,
   SectionDivider,
-  SettingsCard,
   TextInput,
   Toggle,
 } from "@/components/settings/SettingsUI";
+
+import { SettingsPanelSection } from "@/components/settings/SettingsPanelSection";
 
 export function SettingsPanelContent({
   activeSection,
@@ -47,26 +48,10 @@ export function SettingsPanelContent({
   ) => void;
   handleUpdate: (patch: Partial<MarketMindSettings>) => void;
 }) {
-  const Section = ({
-    title,
-    description,
-    right,
-    children,
-  }: {
-    title: string;
-    description?: string;
-    right?: React.ReactNode;
-    children: React.ReactNode;
-  }) => (
-    <SettingsCard title={title} description={description} right={right}>
-      {children}
-    </SettingsCard>
-  );
-
   return (
     <>
       {activeSection === "profile" ? (
-        <Section
+        <SettingsPanelSection
           title="Profile"
           description="Manage identity, contact details, and access safeguards."
         >
@@ -85,9 +70,7 @@ export function SettingsPanelContent({
                   <div className="text-xs text-zinc-400 mt-1">
                     {settings.account.email || "—"}
                   </div>
-                  <FieldHint>
-                    Member since: {new Date().getFullYear() - 1}
-                  </FieldHint>
+                  <FieldHint>Member since: {new Date().getFullYear() - 1}</FieldHint>
                 </div>
               </div>
             </div>
@@ -183,9 +166,7 @@ export function SettingsPanelContent({
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-bold">
-                        Email Verification Status
-                      </div>
+                      <div className="text-sm font-bold">Email Verification Status</div>
                       <div className="text-xs text-zinc-400 mt-1">
                         Secure access for notifications.
                       </div>
@@ -199,12 +180,8 @@ export function SettingsPanelContent({
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-bold">
-                        Phone Verification Status
-                      </div>
-                      <div className="text-xs text-zinc-400 mt-1">
-                        OTP protected sign-in.
-                      </div>
+                      <div className="text-sm font-bold">Phone Verification Status</div>
+                      <div className="text-xs text-zinc-400 mt-1">OTP protected sign-in.</div>
                     </div>
                     <div className="text-xs font-bold rounded-full px-3 py-1 bg-yellow-500/10 border border-yellow-400/20 text-yellow-200">
                       Pending
@@ -225,11 +202,11 @@ export function SettingsPanelContent({
               </div>
             </div>
           </div>
-        </Section>
+        </SettingsPanelSection>
       ) : null}
 
       {activeSection === "appearance" ? (
-        <Section
+        <SettingsPanelSection
           title="Appearance"
           description="Dial your platform look and density. All changes apply instantly."
         >
@@ -240,7 +217,9 @@ export function SettingsPanelContent({
                 <SelectChips
                   value={settings.appearance.theme}
                   onChange={(v) =>
-                    handleUpdate({ appearance: { ...settings.appearance, theme: v } })
+                    handleUpdate({
+                      appearance: { ...settings.appearance, theme: v },
+                    })
                   }
                   options={[
                     { value: "dark", label: "Dark" },
@@ -310,15 +289,13 @@ export function SettingsPanelContent({
                 ]}
               />
             </div>
-            <FieldHint>
-              This prototype uses CSS variable scaling for instant preview.
-            </FieldHint>
+            <FieldHint>This prototype uses CSS variable scaling for instant preview.</FieldHint>
           </div>
-        </Section>
+        </SettingsPanelSection>
       ) : null}
 
       {activeSection === "trading" ? (
-        <Section
+        <SettingsPanelSection
           title="Trading Preferences"
           description="Control your default markets, chart behavior, and data refresh cadence."
         >
@@ -423,11 +400,11 @@ export function SettingsPanelContent({
               />
             </div>
           </div>
-        </Section>
+        </SettingsPanelSection>
       ) : null}
 
       {activeSection === "ai" ? (
-        <Section
+        <SettingsPanelSection
           title="MarketMind AI Settings"
           description="Control how AI analyzes risk, drafts insights, and supports your trading decisions."
         >
@@ -540,11 +517,11 @@ export function SettingsPanelContent({
               />
             </div>
           </div>
-        </Section>
+        </SettingsPanelSection>
       ) : null}
 
       {activeSection === "notifications" ? (
-        <Section
+        <SettingsPanelSection
           title="Notifications"
           description="Choose which events you want to be notified about."
           right={<div className="text-xs text-zinc-400">Fine-grained controls</div>}
@@ -553,9 +530,7 @@ export function SettingsPanelContent({
             <Toggle
               checked={settings.alerts.priceAlerts}
               onChange={(v) =>
-                handleUpdate({
-                  alerts: { ...settings.alerts, priceAlerts: v },
-                })
+                handleUpdate({ alerts: { ...settings.alerts, priceAlerts: v } })
               }
               label="Price Alerts"
             />
@@ -571,9 +546,7 @@ export function SettingsPanelContent({
             <Toggle
               checked={settings.alerts.newsAlerts}
               onChange={(v) =>
-                handleUpdate({
-                  alerts: { ...settings.alerts, newsAlerts: v },
-                })
+                handleUpdate({ alerts: { ...settings.alerts, newsAlerts: v } })
               }
               label="News Alerts"
             />
@@ -614,11 +587,11 @@ export function SettingsPanelContent({
               label="Email Notifications"
             />
           </div>
-        </Section>
+        </SettingsPanelSection>
       ) : null}
 
       {activeSection === "security" ? (
-        <Section
+        <SettingsPanelSection
           title="Security Center"
           description="Protect your account with strong authentication and session controls."
           right={<div className="text-xs text-zinc-400">Last login • demo</div>}
@@ -645,9 +618,7 @@ export function SettingsPanelContent({
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-sm font-bold">
-                    Two-Factor Authentication
-                  </div>
+                  <div className="text-sm font-bold">Two-Factor Authentication</div>
                   <div className="text-xs text-zinc-400 mt-1">OTP with device trust.</div>
                 </div>
                 <div className="text-xs font-bold rounded-full px-3 py-1 bg-emerald-500/10 border border-emerald-400/20 text-emerald-300">
@@ -726,11 +697,11 @@ export function SettingsPanelContent({
               Manage Devices
             </button>
           </div>
-        </Section>
+        </SettingsPanelSection>
       ) : null}
 
       {activeSection === "data" ? (
-        <Section
+        <SettingsPanelSection
           title="Data & Privacy"
           description="Export your data or reset preferences. Destructive actions require confirmation."
           right={<div className="text-xs text-zinc-400">Control at every step</div>}
@@ -790,11 +761,11 @@ export function SettingsPanelContent({
               </div>
             </div>
           </div>
-        </Section>
+        </SettingsPanelSection>
       ) : null}
 
       {activeSection === "about" ? (
-        <Section
+        <SettingsPanelSection
           title="About MarketMind"
           description="Enterprise-grade insights and AI-powered market intelligence."
         >
@@ -815,10 +786,9 @@ export function SettingsPanelContent({
               <div className="mt-1 text-sm font-bold">github.com/marketmind</div>
             </div>
           </div>
-        </Section>
+        </SettingsPanelSection>
       ) : null}
 
-      {/* Modals live at bottom; always rendered */}
       <Modal
         open={changePasswordOpen}
         title="Change Password"
@@ -845,31 +815,16 @@ export function SettingsPanelContent({
         <div className="grid grid-cols-1 gap-4">
           <div>
             <FieldLabel>Current Password</FieldLabel>
-            <TextInput
-              value={""}
-              onChange={() => {}}
-              placeholder="••••••••"
-              type="password"
-            />
+            <TextInput value={""} onChange={() => {}} placeholder="••••••••" type="password" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <FieldLabel>New Password</FieldLabel>
-              <TextInput
-                value={""}
-                onChange={() => {}}
-                placeholder="••••••••"
-                type="password"
-              />
+              <TextInput value={""} onChange={() => {}} placeholder="••••••••" type="password" />
             </div>
             <div>
               <FieldLabel>Confirm New Password</FieldLabel>
-              <TextInput
-                value={""}
-                onChange={() => {}}
-                placeholder="••••••••"
-                type="password"
-              />
+              <TextInput value={""} onChange={() => {}} placeholder="••••••••" type="password" />
             </div>
           </div>
           <FieldHint>This is a UI prototype. In production, connect to your secure API.</FieldHint>

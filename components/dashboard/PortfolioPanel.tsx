@@ -9,6 +9,12 @@ type PortfolioRow = {
   changePercent?: number;
 };
 
+import PortfolioAllocationChart from "@/components/dashboard/PortfolioAllocationChart";
+import PortfolioPerformanceCard from "@/components/dashboard/PortfolioPerformanceCard";
+import PortfolioRiskCard from "@/components/dashboard/PortfolioRiskCard";
+import AIPortfolioAdvisor from "@/components/dashboard/AIPortfolioAdvisor";
+
+
 export default function PortfolioPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +26,7 @@ export default function PortfolioPanel() {
     watchlistCount?: number;
     rows?: PortfolioRow[];
   }>({});
+
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +77,7 @@ export default function PortfolioPanel() {
     };
   }, [portfolio]);
 
-  const donut = useMemo(() => {
+  const allocation = useMemo(() => {
     // simple allocation donut from holdingsCount/watchlistCount for premium feel
     const h = typeof portfolio.holdingsCount === "number" ? portfolio.holdingsCount : 12;
     const w = typeof portfolio.watchlistCount === "number" ? portfolio.watchlistCount : 8;
@@ -80,102 +87,117 @@ export default function PortfolioPanel() {
     return { holdingsPct, watchPct };
   }, [portfolio]);
 
+  const holdingsCount = typeof portfolio.holdingsCount === "number" ? portfolio.holdingsCount : 0;
+
   return (
-    <GlassCard className="p-5">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4">
+      <GlassCard className="p-5">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
         <div>
-          <div className="text-xs text-zinc-400 font-medium">Portfolio</div>
-          <h2 className="text-xl font-semibold mt-1">Total Value</h2>
+          <div className="text-xs text-zinc-400 font-medium">Portfolio Summary</div>
+          <div className="text-xl font-semibold mt-1 text-white">Portfolio Analytics</div>
         </div>
-        <div className="text-xs text-zinc-500">Live allocation</div>
-      </div>
 
-      {loading ? (
-        <div className="mt-5 space-y-3">
-          <div className="h-10 w-36 rounded-xl bg-white/5 animate-[skeleton-shimmer_1.3s_ease-in-out_infinite]" />
-          <div className="h-6 w-44 rounded-xl bg-white/5 animate-[skeleton-shimmer_1.3s_ease-in-out_infinite]" />
-          <div className="h-24 w-full rounded-2xl bg-white/5 animate-[skeleton-shimmer_1.3s_ease-in-out_infinite]" />
-        </div>
-      ) : (
-        <>
-          <div className="mt-4 flex items-baseline justify-between gap-4">
-            <div>
-              <div className="text-4xl font-bold tabular-nums text-[#FACC15]">
-                ${metrics.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </div>
-              <div
-                className={`mt-2 text-sm font-semibold ${metrics.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}
-              >
-                {metrics.pnl >= 0 ? "+" : ""}${metrics.pnl.toLocaleString()} ({metrics.pnlPct.toFixed(2)}%)
-              </div>
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3 w-full sm:w-auto">
+            <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
+              <div className="h-6 w-28 rounded-lg bg-white/5 animate-[skeleton-shimmer_1.3s_ease-in-out_infinite]" />
+              <div className="mt-3 h-10 w-40 rounded-xl bg-white/5 animate-[skeleton-shimmer_1.3s_ease-in-out_infinite]" />
             </div>
-
-            <div className="hidden sm:block">
-              <div className="text-xs text-zinc-400">Top Performer</div>
-              <div className="mt-1 text-sm font-bold text-white">{metrics.topSym}</div>
-              <div className="text-[11px] text-zinc-500 mt-1">Best daily momentum</div>
+            <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
+              <div className="h-6 w-28 rounded-lg bg-white/5 animate-[skeleton-shimmer_1.3s_ease-in-out_infinite]" />
+              <div className="mt-3 h-10 w-36 rounded-xl bg-white/5 animate-[skeleton-shimmer_1.3s_ease-in-out_infinite]" />
             </div>
           </div>
-
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2 rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs text-zinc-400">Allocation</div>
-                  <div className="text-sm font-semibold mt-1 text-white">Holdings vs Watchlist</div>
-                </div>
-                <div className="text-xs text-zinc-500">{donut.holdingsPct.toFixed(0)}% / {donut.watchPct.toFixed(0)}%</div>
-              </div>
-              <div className="mt-3 flex items-center gap-4">
-                <div className="relative h-16 w-16">
-                  <svg viewBox="0 0 36 36" className="h-16 w-16">
-                    <path
-                      d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="#FACC15"
-                      strokeWidth="3.8"
-                      strokeLinecap="round"
-                      strokeDasharray={`${(donut.holdingsPct / 100) * 100} 100`}
-                    />
-                    <path
-                      d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="#27272A"
-                      strokeWidth="3.8"
-                      strokeLinecap="round"
-                      strokeDasharray={`${(donut.watchPct / 100) * 100} 100`}
-                      transform="rotate(180 18 18)"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 grid place-items-center text-[11px] font-bold text-white/90">
-                    MIX
-                  </div>
-                </div>
-
-                <div className="flex-1 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-zinc-800/70 bg-black/20 p-3">
-                    <div className="text-[11px] text-zinc-500">Holdings</div>
-                    <div className="mt-1 text-sm font-bold text-[#FACC15]">{Math.round(donut.holdingsPct)}%</div>
-                  </div>
-                  <div className="rounded-xl border border-zinc-800/70 bg-black/20 p-3">
-                    <div className="text-[11px] text-zinc-500">Watchlist</div>
-                    <div className="mt-1 text-sm font-bold text-white">{Math.round(donut.watchPct)}%</div>
-                  </div>
-                </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
+              <div className="text-[11px] text-zinc-500">Total Portfolio Value</div>
+              <div className="mt-1 text-3xl font-bold tabular-nums text-[#FACC15]">
+                ${metrics.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
             </div>
 
             <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
-              <div className="text-xs text-zinc-400">Worst Performer</div>
-              <div className="mt-2 text-sm font-bold text-white">{metrics.worstSym}</div>
-              <div className="text-[11px] text-zinc-500 mt-2">Needs attention</div>
+              <div className="text-[11px] text-zinc-500">Today&apos;s Gain/Loss</div>
+              <div className={`mt-1 text-2xl font-bold tabular-nums ${metrics.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {metrics.pnl >= 0 ? "+" : ""}${metrics.pnl.toLocaleString()} ({metrics.pnlPct.toFixed(2)}%)
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
+              <div className="text-[11px] text-zinc-500">Overall Return %</div>
+              <div className="mt-1 text-2xl font-bold tabular-nums text-white">{metrics.pnlPct.toFixed(2)}%</div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
+              <div className="text-[11px] text-zinc-500">Number of Holdings</div>
+              <div className="mt-1 text-2xl font-bold tabular-nums text-white">{holdingsCount}</div>
             </div>
           </div>
-        </>
-      )}
+        )}
+      </div>
 
       {error ? <div className="mt-3 text-xs text-red-400">{error}</div> : null}
     </GlassCard>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="xl:col-span-2 space-y-4">
+          <PortfolioAllocationChart allocations={allocation} loading={loading} />
+          <PortfolioPerformanceCard totalValue={metrics.total} todayPnL={metrics.pnl} todayPnLPct={metrics.pnlPct} />
+        </div>
+        <div className="space-y-4">
+          <PortfolioRiskCard inputs={{ holdingsCount: portfolio.holdingsCount, totalValue: portfolio.totalValue, todayPnL: portfolio.todayPnL, todayPnLPercent: portfolio.todayPnLPercent }} />
+          <AIPortfolioAdvisor
+            portfolio={{
+              totalValue: portfolio.totalValue,
+              holdingsCount: portfolio.holdingsCount,
+              todayPnLPercent: portfolio.todayPnLPercent,
+              holdings: Array.isArray(portfolio.rows)
+                ? portfolio.rows.map((r) => ({
+                    symbol: r.symbol,
+                    quantity: undefined,
+                    averagePrice: undefined,
+                    currentPrice: undefined,
+                    totalValue: typeof r.value === "number" ? r.value : undefined,
+                    allocationPct: undefined,
+                  }))
+                : [],
+              allocation: allocation,
+              riskMetrics: {
+                volatilityPlaceholder: portfolio.todayPnLPercent,
+                holdingsCount: portfolio.holdingsCount,
+              },
+            }}
+          />
+
+          <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-5">
+
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-zinc-400 font-medium">Top Performing Holding</div>
+                <div className="text-sm font-semibold mt-1 text-white">{metrics.topSym}</div>
+              </div>
+              <div className="text-xs font-semibold text-emerald-400">▲</div>
+            </div>
+            <div className="mt-3 text-[11px] text-zinc-500">Best daily momentum</div>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-zinc-400 font-medium">Worst Performing Holding</div>
+                <div className="text-sm font-semibold mt-1 text-white">{metrics.worstSym}</div>
+              </div>
+              <div className="text-xs font-semibold text-red-400">▼</div>
+            </div>
+            <div className="mt-3 text-[11px] text-zinc-500">Needs attention</div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
+
 

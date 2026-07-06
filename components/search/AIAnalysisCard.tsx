@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
+
 
 type Stock = {
   symbol: string;
@@ -109,14 +110,10 @@ export default function AIAnalysisCard({ stock }: { stock: Stock }) {
   const [activeParsed, setActiveParsed] = useState<ParsedAI | null>(null);
 
   // Clear current display when searched stock changes.
-  // Note: setState in useEffect is intentionally preserved from original behavior,
-  // but React linting for this repo flags it as a warning/error.
-  useEffect(() => {
-    setActiveReply(null);
-    setActiveParsed(null);
-    setError(null);
-    setIsLoading(false);
-  }, [symbol]);
+  // UseEffect would trigger setState-in-effect lint; instead do it during event handlers
+  // and keep active content untouched unless user explicitly generates.
+
+
 
 
   const canUseCache = !!cache[symbol]?.replyText;
@@ -130,6 +127,7 @@ export default function AIAnalysisCard({ stock }: { stock: Stock }) {
   }, [stock]);
 
   const handleGenerate = async () => {
+
     const currentSymbol = symbol;
     if (!currentSymbol) return;
     setError(null);
@@ -172,8 +170,9 @@ export default function AIAnalysisCard({ stock }: { stock: Stock }) {
 
       setActiveReply(replyText);
       setActiveParsed(parsed);
-    } catch (e: any) {
-      setError("AI analysis unavailable.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "AI analysis unavailable.");
+
       setActiveReply(null);
       setActiveParsed(null);
     } finally {

@@ -40,7 +40,8 @@ export default function SearchAutocomplete({
   minChars = 1,
 }: Props) {
   const [items, setItems] = useState<SearchAutocompleteItem[]>([]);
-  const [open, setOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -55,6 +56,8 @@ export default function SearchAutocomplete({
     return !disabled && query.trim().length >= minChars;
   }, [disabled, query, minChars]);
 
+  const open = isFocused && canSearch && (loading || items.length > 0);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -62,7 +65,7 @@ export default function SearchAutocomplete({
     const onDocClick = (e: MouseEvent) => {
       if (!containerRef.current) return;
       const target = e.target as Node;
-      if (!containerRef.current.contains(target)) setOpen(false);
+      if (!containerRef.current.contains(target)) setIsFocused(false);
     };
 
     document.addEventListener("mousedown", onDocClick);
@@ -70,33 +73,20 @@ export default function SearchAutocomplete({
   }, []);
 
   useEffect(() => {
-    if (!canSearch) {
-      setOpen(false);
-      setItems([]);
-      setLoading(false);
-      return;
-    }
+    if (!canSearch) return;
 
     const q = query.trim();
-    if (!q) {
-      setOpen(false);
-      setItems([]);
-      setLoading(false);
-      return;
-    }
+    if (!q) return;
 
-    // Cache
     const cached = cacheRef.current.get(q.toLowerCase());
     if (cached) {
       setItems(cached);
       setLoading(false);
-      setOpen(true);
       setActiveIndex(0);
       return;
     }
 
     setLoading(true);
-    setOpen(true);
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -104,20 +94,15 @@ export default function SearchAutocomplete({
 
     const t = window.setTimeout(async () => {
       try {
-        const res = await fetch(
-          `${fetchUrl}?q=${encodeURIComponent(q)}`,
-          { signal: controller.signal }
-        );
+        const res = await fetch(`${fetchUrl}?q=${encodeURIComponent(q)}`, { signal: controller.signal });
         const data = await res.json();
-        const next: SearchAutocompleteItem[] = Array.isArray(data?.results)
-          ? data.results
-          : [];
+        const next: SearchAutocompleteItem[] = Array.isArray(data?.results) ? data.results : [];
 
         cacheRef.current.set(q.toLowerCase(), next);
         setItems(next);
         setActiveIndex(0);
       } catch (e) {
-        if ((e as any)?.name === "AbortError") return;
+        if (e && typeof e === "object" && "name" in e && (e as { name?: unknown }).name === "AbortError") return;
         setItems([]);
       } finally {
         setLoading(false);
@@ -130,12 +115,13 @@ export default function SearchAutocomplete({
     };
   }, [canSearch, fetchUrl, query]);
 
+
   const selectAt = (idx: number) => {
     const it = items[idx];
     if (!it) return;
     onSelect(it);
-    setOpen(false);
     // keep input text until parent updates
+    setIsFocused(false);
   };
 
   return (
@@ -146,14 +132,18 @@ export default function SearchAutocomplete({
         disabled={disabled}
         onChange={(e) => {
           onChange(e.target.value);
-          setOpen(true);
+          setIsFocused(true);
         }}
         onFocus={() => {
-          if (items.length > 0) setOpen(true);
+          if (items.length > 0) setIsFocused(true);
+          else setIsFocused(true);
+        }}
+        onBlur={() => {
+          setIsFocused(false);
         }}
         onKeyDown={(e) => {
-          if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-            setOpen(true);
+          if (!isFocused && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+            setIsFocused(true);
             return;
           }
 
@@ -176,7 +166,7 @@ export default function SearchAutocomplete({
           }
 
           if (e.key === "Escape") {
-            setOpen(false);
+            setIsFocused(false);
           }
         }}
         placeholder={placeholder}
@@ -186,8 +176,8 @@ export default function SearchAutocomplete({
       {/* Left icon slot */}
       <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10.5 18C14.6421 18 18 14.6421 18 10.5C18 6.35786 14.6421 3 10.5 3C6.35786 3 3 6.35786 3 10.5C3 14.6421 6.35786 18 10.5 18Z" stroke="currentColor" strokeWidth="2"/>
-          <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M10.5 18C14.6421 18 18 14.6421 18 10.5C18 6.35786 14.6421 3 10.5 3C6.35786 3 3 6.35786 3 10.5C3 14.6421 6.35786 18 10.5 18Z" stroke="currentColor" strokeWidth="2" />
+          <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       </div>
 

@@ -16,9 +16,11 @@ import GlassCard from "@/components/ui/GlassCard";
 import { SkeletonBlock } from "@/components/ui/Skeleton";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import TerminalMetricCards from "@/components/dashboard/TerminalMetricCards";
-import GlobalMarketsGrid from "@/components/dashboard/GlobalMarketsGrid";
+import MarketHeatmap from "@/components/dashboard/MarketHeatmap";
 import TrendingStocksCard from "@/components/dashboard/TrendingStocksCard";
 import LatestNewsGrid from "@/components/dashboard/LatestNewsGrid";
+import AIDailyBrief from "@/components/dashboard/AIDailyBrief";
+
 
 import { useRouter } from "next/navigation";
 
@@ -54,11 +56,9 @@ function DashboardContent() {
   const [marketLoading, setMarketLoading] = useState(true);
   const [selectedSymbol, setSelectedSymbol] = useState("SPY");
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const symbol = params.get("symbol") || "SPY";
-    setSelectedSymbol(symbol.toUpperCase());
-  }, []);
+
+
+
 
 
   useEffect(() => {
@@ -131,11 +131,15 @@ function DashboardContent() {
           <DashboardHeader />
 
           <div className="mt-4">
+            <AIDailyBrief />
+          </div>
+
+          <div className="mt-4">
             <TerminalMetricCards />
           </div>
 
           <div className="mt-4">
-            <GlobalMarketsGrid />
+            <MarketHeatmap />
           </div>
 
           <div className="mt-4">

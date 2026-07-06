@@ -1,15 +1,13 @@
-# TODO - MarketMind TradingView-like Search Upgrade
+# TODO - Sprint 3D (Portfolio Analytics Dashboard)
 
-- [x] Implement SearchAutocomplete reusable component (premium dark TradingView-like UI)
-
-- [ ] Add search universe catalog (Nifty 50, Nifty Next 50, major US, ETFs, BTC/ETH) with logos when available
-- [ ] Add backend API endpoint `/api/search-autocomplete` for intelligent matching (name partial, symbol, case-insensitive)
-- [x] Replace exact-match search in `TerminalTopNav` with autocomplete dropdown
-
-- [x] Add debounce (300ms), caching, loading spinner, empty state (no alert)
-
-- [ ] Add keyboard navigation (ArrowUp/ArrowDown/Enter)
-- [ ] On selection, load chart + market data + AI analysis by driving `ChartStateContext` symbol
-- [ ] Sync Dashboard render: `AiResearchCard` should receive selected symbol; `MarketOverviewContainer` should query selected symbol
-- [ ] Summarize all modified files
+## Plan (approved once confirmed)
+- [ ] Replace `components/dashboard/PortfolioPanel.tsx` with premium analytics dashboard UI.
+- [ ] Create `components/dashboard/PortfolioAllocationChart.tsx` (Recharts donut + legend + hover animation).
+- [ ] Create `components/dashboard/PortfolioPerformanceCard.tsx` (timeframe tabs + line chart; dummy history fallback).
+- [ ] Create `components/dashboard/PortfolioRiskCard.tsx` (risk metric cards + placeholders).
+- [ ] Ensure UI styling: black background, glass cards, yellow accent, green/red gains/losses, rounded-2xl, subtle glow.
+- [ ] Reuse existing `/api/portfolio` data and never break UI when missing fields.
+- [ ] Keep authentication/search/watchlist/AI/heatmap/trading chart/backend untouched.
+- [ ] Run `npm run build` and fix any TS/ESLint issues.
+- [ ] Verify that existing dashboard page still renders and other panels unchanged.
 

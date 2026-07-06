@@ -36,59 +36,61 @@ export default function AiChatWidget() {
   }, [open]);
 
   const send = async (text: string) => {
-  const trimmed = text.trim();
-  if (!trimmed || loading) return;
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
 
-  const updatedMessages = [
-    ...messages,
-    { role: "user" as const, text: trimmed },
-  ];
+    const updatedMessages = [
+      ...messages,
+      { role: "user" as const, text: trimmed },
+    ];
 
-  setMessages(updatedMessages);
-  setInput("");
-  setLoading(true);
+    setMessages(updatedMessages);
+    setInput("");
+    setLoading(true);
 
-  try {
-    const apiMessages = updatedMessages.map((m) => ({
-      role: m.role === "ai" ? "assistant" : "user",
-      content: m.text,
-    }));
+    try {
+      const apiMessages = updatedMessages.map((m) => ({
+        role: m.role === "ai" ? "assistant" : "user",
+        content: m.text,
+      }));
 
-    const res = await fetch("/api/ai-chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messages: apiMessages,
-      }),
-    });
+      const res = await fetch("/api/ai-chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: apiMessages,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok || data.error) {
-      throw new Error(data.error || "Request failed");
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Request failed");
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          text: data.reply,
+        },
+      ]);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          text: `Couldn't reach MarketMind AI.\n${message}`,
+        },
+      ]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "ai",
-        text: data.reply,
-      },
-    ]);
-  } catch (err: any) {
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "ai",
-        text: `Couldn't reach MarketMind AI.\n${err.message}`,
-      },
-    ]);
-  } finally {
-    setLoading(false);
-  }
-};
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {open ? (
@@ -129,9 +131,7 @@ export default function AiChatWidget() {
                 </div>
               </div>
             ))}
-            {loading && (
-              <div className="text-xs text-zinc-400">Thinking…</div>
-            )}
+            {loading && <div className="text-xs text-zinc-400">Thinking…</div>}
           </div>
 
           <div className="p-4 border-t border-zinc-800">
