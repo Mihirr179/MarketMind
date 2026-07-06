@@ -3,6 +3,8 @@
 import React, { useMemo, useRef, useState } from "react";
 import GlassCard from "@/components/ui/GlassCard";
 import { Loader2, RefreshCw, RotateCcw, Sparkles } from "lucide-react";
+import { usePortfolioData } from "@/components/dashboard/PortfolioDataContext";
+
 
 type RiskLevel = "Low" | "Medium" | "High";
 
@@ -22,7 +24,6 @@ type PortfolioAdvisorData = {
   todayPnLPercent?: number;
   holdings?: PortfolioAdvisorHolding[];
   allocation?: { holdingsPct?: number; watchPct?: number };
-  riskMetrics?: Record<string, unknown>;
 };
 
 type AiPortfolioResponse = {
@@ -61,17 +62,18 @@ function buildPrompt(portfolio: PortfolioAdvisorData) {
   const normalizedHoldings = holdings.map((h) => ({
     symbol: h.symbol || "—",
     quantity: h.quantity ?? null,
-    averagePrice: h.averagePrice ?? null,
-    currentPrice: h.currentPrice ?? null,
-    totalValue: h.totalValue ?? null,
-    portfolioAllocationPct:
-      typeof h.allocationPct === "number" && Number.isFinite(h.allocationPct)
-        ? Number(h.allocationPct.toFixed(4))
-        : null,
+    averagePrice: undefined,
+    currentPrice: undefined,
+    // PortfolioEnrichedHolding does not provide per-holding allocation% or totalValue.
+    totalValue: null,
+    portfolioAllocationPct: null,
   }));
 
+
   const portfolioAllocation = portfolio.allocation ?? {};
-  const riskMetrics = portfolio.riskMetrics ?? {};
+  const riskMetrics = {} as Record<string, unknown>;
+
+
 
   // Ask for JSON only, as required.
   return {
@@ -133,13 +135,18 @@ function parseAiResponse(text: string): AiPortfolioResponse | null {
   }
 }
 
-export default function AIPortfolioAdvisor({
-  portfolio,
-}: {
-  portfolio: PortfolioAdvisorData;
-}) {
+export default function AIPortfolioAdvisor() {
+  const { data } = usePortfolioData();
+
+  const portfolio = useMemo(
+    () => data ?? ({ holdings: [], holdingsCount: 0 } as unknown as PortfolioAdvisorData),
+    [data]
+  );
+
+
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
 
   const cacheKey = "marketmind_ai_portfolio";
   const attemptedRef = useRef(false);
@@ -147,26 +154,27 @@ export default function AIPortfolioAdvisor({
   const portfolioSignature = useMemo(() => {
     const holdings = Array.isArray(portfolio.holdings) ? portfolio.holdings : [];
 
+
     const simplified = holdings
-      .map((h) => ({
+      .map((h: PortfolioAdvisorHolding) => ({
         symbol: h.symbol || "—",
         quantity: h.quantity ?? null,
-        averagePrice: h.averagePrice ?? null,
-        currentPrice: h.currentPrice ?? null,
-        totalValue: h.totalValue ?? null,
-        allocationPct:
-          typeof h.allocationPct === "number" && Number.isFinite(h.allocationPct)
-            ? Number(h.allocationPct.toFixed(4))
-            : null,
+        averagePrice: undefined,
+        currentPrice: undefined,
+
+        totalValue: null,
+        portfolioAllocationPct: null,
       }))
-      .sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
+      .sort((a: { symbol: string }, b: { symbol: string }) => String(a.symbol).localeCompare(String(b.symbol)));
 
     return JSON.stringify({
-      totalValue: portfolio.totalValue ?? null,
+      totalValue: null,
       holdingsCount: portfolio.holdingsCount ?? null,
-      todayPnLPercent: portfolio.todayPnLPercent ?? null,
+      todayPnLPercent: null,
       allocation: portfolio.allocation ?? null,
-      riskMetrics: portfolio.riskMetrics ?? null,
+      
+      riskMetrics: null,
+
       holdings: simplified,
     });
   }, [portfolio]);

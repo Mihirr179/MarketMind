@@ -6,6 +6,8 @@ import TradingTerminalChart from "@/components/dashboard/TradingTerminalChart";
 
 import { ChartStateProvider } from "@/components/dashboard/ChartStateContext";
 import TerminalTopNav from "@/components/dashboard/TerminalTopNav";
+import { PortfolioDataProvider } from "@/components/dashboard/PortfolioDataContext";
+
 import WatchlistPanel from "@/components/dashboard/WatchlistPanel";
 import AiResearchCard from "@/components/dashboard/AiResearchCard";
 import PortfolioPanel from "@/components/dashboard/PortfolioPanel";
@@ -49,12 +51,16 @@ function DashboardContent() {
     error?: string;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [user, setUser] = useState<User | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
+
   const [marketRows, setMarketRows] = useState<MarketRow[]>([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [marketLoading, setMarketLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedSymbol, setSelectedSymbol] = useState("SPY");
+
 
 
 
@@ -143,44 +149,47 @@ function DashboardContent() {
           </div>
 
           <div className="mt-4">
-            <ChartStateProvider
-              initialSymbol={selectedSymbol}
-            >
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 space-y-4">
-                  <TradingTerminalChart />
+            {/* Shared enriched portfolio metrics (fetched once) */}
+            <PortfolioDataProvider>
+              <ChartStateProvider initialSymbol={selectedSymbol}>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-                  {marketLoading ? (
-                    <GlassCard className="p-5">
-                      <SkeletonBlock className="h-72 w-full" />
-                    </GlassCard>
-                  ) : (
-                    <MarketMovers
-                      rows={marketRows as unknown as Array<{
-                        symbol: string;
-                        company?: string;
-                        price: number | null;
-                        changePercent: number | null;
-                        changeAbs: number | null;
-                      }>}
+                  <div className="lg:col-span-2 space-y-4">
+                    <TradingTerminalChart />
+
+                    {marketLoading ? (
+                      <GlassCard className="p-5">
+                        <SkeletonBlock className="h-72 w-full" />
+                      </GlassCard>
+                    ) : (
+                      <MarketMovers
+                        rows={marketRows as unknown as Array<{
+                          symbol: string;
+                          company?: string;
+                          price: number | null;
+                          changePercent: number | null;
+                          changeAbs: number | null;
+                        }>}
+                      />
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <WatchlistPanel />
+                    <TrendingStocksCard />
+
+                    <AiResearchCard
+                      symbol={selectedSymbol}
+                      confidence={86}
+                      risk="Medium"
                     />
-                  )}
+                    <PortfolioPanel />
+                  </div>
                 </div>
-
-                <div className="space-y-4">
-                  <WatchlistPanel />
-                  <TrendingStocksCard />
-
-                  <AiResearchCard
-                    symbol={selectedSymbol}
-                    confidence={86}
-                    risk="Medium"
-                  />
-                  <PortfolioPanel />
-                </div>
-              </div>
-            </ChartStateProvider>
+              </ChartStateProvider>
+            </PortfolioDataProvider>
           </div>
+
 
           <div className="mt-4">
             {newsLoading ? (

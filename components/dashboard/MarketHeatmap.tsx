@@ -68,8 +68,8 @@ function hashString(input: string) {
     h ^= input.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-  // eslint-disable-next-line no-bitwise
   return ((h >>> 0) % 10000) / 10000;
+
 }
 
 function generateSparklinePoints(args: {

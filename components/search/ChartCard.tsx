@@ -44,8 +44,10 @@ const data1M = [
   { day: "W7", price: 205 },
 ];
 
-export default function ChartCard({ stock }: { stock: StockLite }) {
+export default function ChartCard({ stock: _stock }: { stock: StockLite }) {
   const [range, setRange] = useState<"1D" | "1W" | "1M">("1W");
+
+void _stock;
 
   const chartData = useMemo(() => {
     if (range === "1D") return data1D;

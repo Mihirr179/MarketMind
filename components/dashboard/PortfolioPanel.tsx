@@ -1,93 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import GlassCard from "@/components/ui/GlassCard";
-
-type PortfolioRow = {
-  symbol?: string;
-  value?: number;
-  changePercent?: number;
-};
-
 import PortfolioAllocationChart from "@/components/dashboard/PortfolioAllocationChart";
 import PortfolioPerformanceCard from "@/components/dashboard/PortfolioPerformanceCard";
 import PortfolioRiskCard from "@/components/dashboard/PortfolioRiskCard";
 import AIPortfolioAdvisor from "@/components/dashboard/AIPortfolioAdvisor";
 
+import { usePortfolioData } from "@/components/dashboard/PortfolioDataContext";
 
 export default function PortfolioPanel() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [portfolio, setPortfolio] = useState<{
-    totalValue?: number;
-    todayPnL?: number;
-    todayPnLPercent?: number;
-    holdingsCount?: number;
-    watchlistCount?: number;
-    rows?: PortfolioRow[];
-  }>({});
+  const { data, loading, error } = usePortfolioData();
 
+  const allocation = data?.allocation ?? null;
+  const holdingsCount = data?.holdingsCount ?? 0;
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/portfolio");
-        const data = await res.json();
-        if (cancelled) return;
-
-        if (data && typeof data === "object") setPortfolio(data);
-      } catch (e) {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : "Failed to load portfolio");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const metrics = useMemo(() => {
-    const total = typeof portfolio.totalValue === "number" ? portfolio.totalValue : 24580;
-    const pnl = typeof portfolio.todayPnL === "number" ? portfolio.todayPnL : 1245;
-    const pnlPct = typeof portfolio.todayPnLPercent === "number" ? portfolio.todayPnLPercent : 5.3;
-
-    const rows = Array.isArray(portfolio.rows) ? portfolio.rows : [];
-    const normalized = rows
-      .filter((r) => typeof r.changePercent === "number")
-      .map((r) => ({ symbol: r.symbol || "—", changePercent: r.changePercent as number }));
-
-    const top = normalized.sort((a, b) => b.changePercent - a.changePercent)[0];
-    const worst = normalized.sort((a, b) => a.changePercent - b.changePercent)[0];
-
-    const topSym = top?.symbol || "AAPL";
-    const worstSym = worst?.symbol || "MSFT";
-
-    return {
-      total,
-      pnl,
-      pnlPct,
-      topSym,
-      worstSym,
-    };
-  }, [portfolio]);
-
-  const allocation = useMemo(() => {
-    // simple allocation donut from holdingsCount/watchlistCount for premium feel
-    const h = typeof portfolio.holdingsCount === "number" ? portfolio.holdingsCount : 12;
-    const w = typeof portfolio.watchlistCount === "number" ? portfolio.watchlistCount : 8;
-    const total = Math.max(1, h + w);
-    const holdingsPct = (h / total) * 100;
-    const watchPct = 100 - holdingsPct;
-    return { holdingsPct, watchPct };
-  }, [portfolio]);
-
-  const holdingsCount = typeof portfolio.holdingsCount === "number" ? portfolio.holdingsCount : 0;
+  const metrics = {
+    total: data?.portfolioValue ?? null,
+    pnl: data?.dailyPnL ?? null,
+    pnlPct: data?.dailyPnLPct ?? null,
+    topSym: data?.topHolding?.symbol ?? "--",
+    worstSym: data?.worstHolding?.symbol ?? "--",
+  };
 
   return (
     <div className="space-y-4">
@@ -115,21 +48,36 @@ export default function PortfolioPanel() {
             <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
               <div className="text-[11px] text-zinc-500">Total Portfolio Value</div>
               <div className="mt-1 text-3xl font-bold tabular-nums text-[#FACC15]">
-                ${metrics.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {metrics.total == null ? "--" : `$${metrics.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
               </div>
+
             </div>
 
             <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
               <div className="text-[11px] text-zinc-500">Today&apos;s Gain/Loss</div>
-              <div className={`mt-1 text-2xl font-bold tabular-nums ${metrics.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {metrics.pnl >= 0 ? "+" : ""}${metrics.pnl.toLocaleString()} ({metrics.pnlPct.toFixed(2)}%)
+              <div
+                className={`mt-1 text-2xl font-bold tabular-nums ${
+                  metrics.pnl == null
+                    ? "text-zinc-300"
+                    : metrics.pnl >= 0
+                      ? "text-emerald-400"
+                      : "text-red-400"
+                }`}
+              >
+                {metrics.pnl == null || metrics.pnlPct == null
+                  ? "--"
+                  : `${metrics.pnl >= 0 ? "+" : ""}$${metrics.pnl.toLocaleString()} (${metrics.pnlPct.toFixed(2)}%)`}
               </div>
             </div>
 
+
             <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
               <div className="text-[11px] text-zinc-500">Overall Return %</div>
-              <div className="mt-1 text-2xl font-bold tabular-nums text-white">{metrics.pnlPct.toFixed(2)}%</div>
+              <div className="mt-1 text-2xl font-bold tabular-nums text-white">
+                {metrics.pnlPct == null ? "--" : `${metrics.pnlPct.toFixed(2)}%`}
+              </div>
             </div>
+
 
             <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4">
               <div className="text-[11px] text-zinc-500">Number of Holdings</div>
@@ -145,32 +93,18 @@ export default function PortfolioPanel() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2 space-y-4">
           <PortfolioAllocationChart allocations={allocation} loading={loading} />
-          <PortfolioPerformanceCard totalValue={metrics.total} todayPnL={metrics.pnl} todayPnLPct={metrics.pnlPct} />
+          <PortfolioPerformanceCard
+            totalValue={metrics.total ?? undefined}
+            todayPnL={metrics.pnl ?? undefined}
+            todayPnLPct={metrics.pnlPct ?? undefined}
+          />
+
         </div>
         <div className="space-y-4">
-          <PortfolioRiskCard inputs={{ holdingsCount: portfolio.holdingsCount, totalValue: portfolio.totalValue, todayPnL: portfolio.todayPnL, todayPnLPercent: portfolio.todayPnLPercent }} />
-          <AIPortfolioAdvisor
-            portfolio={{
-              totalValue: portfolio.totalValue,
-              holdingsCount: portfolio.holdingsCount,
-              todayPnLPercent: portfolio.todayPnLPercent,
-              holdings: Array.isArray(portfolio.rows)
-                ? portfolio.rows.map((r) => ({
-                    symbol: r.symbol,
-                    quantity: undefined,
-                    averagePrice: undefined,
-                    currentPrice: undefined,
-                    totalValue: typeof r.value === "number" ? r.value : undefined,
-                    allocationPct: undefined,
-                  }))
-                : [],
-              allocation: allocation,
-              riskMetrics: {
-                volatilityPlaceholder: portfolio.todayPnLPercent,
-                holdingsCount: portfolio.holdingsCount,
-              },
-            }}
-          />
+          <PortfolioRiskCard />
+
+          <AIPortfolioAdvisor />
+
 
           <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-5">
 

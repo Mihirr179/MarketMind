@@ -56,7 +56,7 @@ export default function MarketOverviewContainer({
       cancelled = true;
       window.clearInterval(id);
     };
-  }, []);
+  }, [symbol]);
 
   return <MarketOverviewStrip rows={rows} />;
 }

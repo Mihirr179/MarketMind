@@ -7,7 +7,10 @@ export default function CompanyProfile({
     symbol: string;
   };
 }) {
+  void stock;
+
   // Data not available from current /api/search. Placeholder UI only.
+
   const fields = [
     { label: "Company Name", value: "Information unavailable" },
     { label: "Exchange", value: "Information unavailable" },

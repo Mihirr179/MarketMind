@@ -44,21 +44,28 @@ export default function PortfolioAllocationChart({
   watchlistLabel?: string;
   loading?: boolean;
 }) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [, setActiveIndex] = useState<number | null>(null);
 
-  const data = useMemo<AllocationDatum[]>(() => {
-    const h = typeof allocations?.holdingsPct === "number" && Number.isFinite(allocations.holdingsPct) ? allocations.holdingsPct : 72;
-    const w = typeof allocations?.watchPct === "number" && Number.isFinite(allocations.watchPct) ? allocations.watchPct : 28;
-    const sum = Math.max(1e-9, h + w);
 
-    const hp = (h / sum) * 100;
-    const wp = 100 - hp;
+  const hasAllocation =
+    typeof allocations?.holdingsPct === "number" && Number.isFinite(allocations.holdingsPct) &&
+    typeof allocations?.watchPct === "number" && Number.isFinite(allocations.watchPct);
+
+  const data = useMemo<AllocationDatum[] | null>(() => {
+    if (!hasAllocation) return null;
+
+    // Use the provided enriched allocation percentages as-is.
+    const h = allocations!.holdingsPct as number;
+    const w = allocations!.watchPct as number;
+
+    // Only render if values are meaningful.
+    if (!Number.isFinite(h) || !Number.isFinite(w)) return null;
 
     return [
-      { name: holdingsLabel, value: hp, color: "#FACC15" },
-      { name: watchlistLabel, value: wp, color: "#27272A" },
+      { name: holdingsLabel, value: h, color: "#FACC15" },
+      { name: watchlistLabel, value: w, color: "#27272A" },
     ];
-  }, [allocations, holdingsLabel, watchlistLabel]);
+  }, [allocations, holdingsLabel, watchlistLabel, hasAllocation]);
 
   return (
     <GlassCard className="p-5 rounded-2xl">
@@ -75,7 +82,7 @@ export default function PortfolioAllocationChart({
           <div className="h-[240px] w-full">
             {loading ? (
               <div className="h-full w-full rounded-2xl bg-white/5 animate-[skeleton-shimmer_1.3s_ease-in-out_infinite]" />
-            ) : (
+            ) : data ? (
               <ResponsiveContainer>
                 <PieChart>
                   <Tooltip content={<CustomTooltip />} />
@@ -88,14 +95,18 @@ export default function PortfolioAllocationChart({
                     stroke="transparent"
                     isAnimationActive
                     animationDuration={900}
-                    onMouseEnter={(_, idx) => setActiveIndex(typeof idx === "number" ? idx : null)}
+                    onMouseEnter={() => setActiveIndex(null)}
                     onMouseLeave={() => setActiveIndex(null)}
                   />
 
-                  {/* Animated emphasis via overlay ring (Recharts cell typing varies by version) */}
                   <div className="sr-only" aria-hidden />
                 </PieChart>
               </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full rounded-2xl border border-zinc-800/70 bg-black/20 p-6 flex flex-col items-center justify-center text-center">
+                <div className="text-sm font-semibold text-white">Allocation unavailable</div>
+                <div className="mt-2 text-xs text-zinc-500">We couldn’t reconstruct Holdings/Watchlist mix yet.</div>
+              </div>
             )}
           </div>
 
@@ -108,19 +119,25 @@ export default function PortfolioAllocationChart({
         </div>
 
         <div className="grid grid-cols-1 gap-3">
-          {data.map((d) => (
-            <div key={d.name} className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4 transition-all duration-300 hover:border-[#FACC15]/35 hover:shadow-[0_0_30px_rgba(250,204,21,0.10)]">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="inline-flex h-2.5 w-2.5 rounded-full" style={{ background: d.color }} aria-hidden />
-                  <div className="min-w-0">
-                    <div className="text-xs text-zinc-400 truncate">{d.name}</div>
-                    <div className="text-sm font-semibold text-white mt-0.5">{formatPct(d.value)}</div>
+          {data ? (
+            data.map((d) => (
+              <div key={d.name} className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4 transition-all duration-300 hover:border-[#FACC15]/35 hover:shadow-[0_0_30px_rgba(250,204,21,0.10)]">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="inline-flex h-2.5 w-2.5 rounded-full" style={{ background: d.color }} aria-hidden />
+                    <div className="min-w-0">
+                      <div className="text-xs text-zinc-400 truncate">{d.name}</div>
+                      <div className="text-sm font-semibold text-white mt-0.5">{formatPct(d.value)}</div>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4 text-xs text-zinc-500">
+              Allocation details will appear after portfolio allocation data becomes available.
             </div>
-          ))}
+          )}
         </div>
       </div>
     </GlassCard>

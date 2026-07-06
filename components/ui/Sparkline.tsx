@@ -9,7 +9,7 @@ export default function Sparkline({
   values: number[];
   tone?: "yellow" | "green" | "red" | "blue";
 }) {
-  const { path, min, max } = useMemo(() => {
+  const { path } = useMemo(() => {
     const pts = values.length ? values : [0];
     const minV = Math.min(...pts);
     const maxV = Math.max(...pts);
@@ -28,7 +28,7 @@ export default function Sparkline({
       .map((v, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(2)},${toY(v).toFixed(2)}`)
       .join(" ");
 
-    return { path: d, min: minV, max: maxV };
+    return { path: d };
   }, [values]);
 
   const stroke =

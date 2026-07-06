@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import GlassCard from "@/components/ui/GlassCard";
-import { Loader2, RotateCcw, RefreshCw, Sparkles } from "lucide-react";
+import { RotateCcw, RefreshCw } from "lucide-react";
 import { SkeletonBlock } from "@/components/ui/Skeleton";
 import type { NewsSentiment } from "./NewsSentimentBadge";
 

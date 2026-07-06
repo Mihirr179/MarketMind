@@ -1,8 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronRight, X } from "lucide-react";
-import { PropsWithChildren, useEffect, useId, useMemo, useState } from "react";
+import { X } from "lucide-react";
+import { PropsWithChildren, useEffect, useId } from "react";
+
 
 import React from "react";
 

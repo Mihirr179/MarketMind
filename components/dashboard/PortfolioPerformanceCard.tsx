@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import GlassCard from "@/components/ui/GlassCard";
 
@@ -30,7 +30,6 @@ function buildHistory(seed: number, points: number) {
     const label = i === 0 ? "Start" : i === points - 1 ? "Now" : "";
     out.push({ t: label || `${i + 1}`, v: current });
   }
-  // normalize to be nicer
   return out.map((p, idx) => ({ t: p.t, v: p.v + idx * 0.01 }));
 }
 
@@ -46,40 +45,37 @@ export default function PortfolioPerformanceCard({
   const [tf, setTf] = useState<TimeframeKey>("7D");
 
   const config = useMemo(() => {
-    const map: Record<TimeframeKey, { points: number; tickEvery: number }> = {
-      "7D": { points: 22, tickEvery: 3 },
-      "1M": { points: 30, tickEvery: 4 },
-      "3M": { points: 60, tickEvery: 8 },
-      "1Y": { points: 120, tickEvery: 20 },
-      ALL: { points: 180, tickEvery: 30 },
+    const map: Record<TimeframeKey, { points: number }> = {
+      "7D": { points: 22 },
+      "1M": { points: 30 },
+      "3M": { points: 60 },
+      "1Y": { points: 120 },
+      ALL: { points: 180 },
     };
     return map[tf];
   }, [tf]);
 
   const data = useMemo(() => {
-    const seed = Math.round((totalValue ?? 24580) + (todayPnL ?? 0) * 10 + (todayPnLPct ?? 0) * 100);
+    const base = typeof totalValue === "number" && Number.isFinite(totalValue) ? totalValue : null;
+
+    if (base == null) return [];
+
+    const seed = Math.round(
+      base + (typeof todayPnL === "number" ? todayPnL : 0) * 0.01 + (typeof todayPnLPct === "number" ? todayPnLPct : 0) * 0.1
+    );
+
     const history = buildHistory(seed, config.points);
-
-    // If we later obtain real history, we can map it here.
-    // For now convert normalized history (base 100) to portfolio dollars.
-    const base = Math.max(1, totalValue ?? 24580);
     const first = history[0]?.v ?? 100;
-    const scaled = history.map((p) => ({
-      t: p.t,
-      v: (p.v / first) * base,
-    }));
-
-    return scaled;
+    return history.map((p) => ({ t: p.t, v: (p.v / first) * base }));
   }, [config.points, totalValue, todayPnL, todayPnLPct]);
 
-  // smooth transitions by keying on timeframe
   const chartKey = tf;
 
   const changePct = useMemo(() => {
+    if (!data.length) return 0;
     const first = data[0]?.v ?? 1;
     const last = data.at(-1)?.v ?? 1;
-    const pct = ((last - first) / first) * 100;
-    return pct;
+    return ((last - first) / first) * 100;
   }, [data]);
 
   return (
@@ -93,7 +89,8 @@ export default function PortfolioPerformanceCard({
           <div className={`text-xs font-semibold ${toneClass(changePct)}`}>
             {changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%
           </div>
-          <div className="hidden sm:block text-[11px] text-zinc-500">(demo history if unavailable)</div>
+          <div className="hidden sm:block text-[11px] text-zinc-500">—</div>
+
         </div>
       </div>
 
@@ -120,54 +117,50 @@ export default function PortfolioPerformanceCard({
 
       <div className="mt-4 h-[260px]">
         <div className="rounded-2xl border border-zinc-800/70 bg-black/20 p-2">
-          <ResponsiveContainer>
-            <LineChart data={data} key={chartKey} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <Tooltip
-                content={(props) => {
-                  const { active, payload } = props;
-                  if (!active || !payload?.length) return null;
-                  // recharts payload is readonly/typed, so treat as readonly
-                  const v = (payload[0] as { value?: number | undefined } | undefined)?.value;
-                  return (
-                    <div className="rounded-xl border border-zinc-800/60 bg-black/75 backdrop-blur px-3 py-2 text-xs text-zinc-200 shadow-lg">
-                      <div className="font-semibold text-white">Portfolio Value</div>
-                      <div className="text-zinc-300">{typeof v === "number" ? formatMoney(v) : "—"}</div>
-                    </div>
-                  );
-                }}
-              />
+          {data.length ? (
+            <ResponsiveContainer>
+              <LineChart data={data} key={chartKey} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <Tooltip
+                  content={(props) => {
+                    const { active, payload } = props;
+                    if (!active || !payload?.length) return null;
+                    const v = (payload[0] as { value?: number | undefined } | undefined)?.value;
+                    return (
+                      <div className="rounded-xl border border-zinc-800/60 bg-black/75 backdrop-blur px-3 py-2 text-xs text-zinc-200 shadow-lg">
+                        <div className="font-semibold text-white">Portfolio Value</div>
+                        <div className="text-zinc-300">{typeof v === "number" ? formatMoney(v) : "—"}</div>
+                      </div>
+                    );
+                  }}
+                />
 
-
-
-              <XAxis dataKey="t" tick={{ fill: "#a1a1aa", fontSize: 11 }} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: "#a1a1aa", fontSize: 11 }} width={70} tickFormatter={(val) => (typeof val === "number" ? `$${(val / 1000).toFixed(0)}k` : "")} />
-              <Line
-                type="monotone"
-                dataKey="v"
-                stroke="#FACC15"
-                strokeWidth={3}
-                dot={false}
-                isAnimationActive
-                animationDuration={650}
-                activeDot={{ r: 4, fill: "#FACC15" }}
-              />
-              <Line
-                type="monotone"
-                dataKey="v"
-                stroke="#FACC15"
-                strokeWidth={8}
-                opacity={0.12}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+                <XAxis dataKey="t" tick={{ fill: "#a1a1aa", fontSize: 11 }} interval="preserveStartEnd" />
+                <YAxis
+                  tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                  width={70}
+                  tickFormatter={(val) => (typeof val === "number" ? `$${(val / 1000).toFixed(0)}k` : "")}
+                />
+                <Line type="monotone" dataKey="v" stroke="#FACC15" strokeWidth={3} dot={false} isAnimationActive animationDuration={650} activeDot={{ r: 4, fill: "#FACC15" }} />
+                <Line type="monotone" dataKey="v" stroke="#FACC15" strokeWidth={8} opacity={0.12} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-sm text-zinc-500">Portfolio history unavailable.</div>
+          )}
         </div>
       </div>
 
       <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="text-xs text-zinc-500">
-          Today: <span className={`font-semibold ${toneClass(todayPnLPct ?? 0)}`}>{todayPnLPct != null ? `${todayPnLPct >= 0 ? "+" : ""}${todayPnLPct.toFixed(2)}%` : "—"}</span>
-          {todayPnL != null ? <span className="ml-2 font-semibold text-white/90">({todayPnL >= 0 ? "+" : ""}{formatMoney(todayPnL).replace("$", "$")})</span> : null}
+          Today:{" "}
+          <span className={`font-semibold ${toneClass(todayPnLPct ?? 0)}`}>
+            {typeof todayPnLPct === "number" ? `${todayPnLPct >= 0 ? "+" : ""}${todayPnLPct.toFixed(2)}%` : "—"}
+          </span>
+          {typeof todayPnL === "number" ? (
+            <span className="ml-2 font-semibold text-white/90">
+              ({todayPnL >= 0 ? "+" : ""}{formatMoney(todayPnL).replace("$", "$")})
+            </span>
+          ) : null}
         </div>
         <div className="text-[11px] text-zinc-500">Smooth transitions on timeframe change</div>
       </div>

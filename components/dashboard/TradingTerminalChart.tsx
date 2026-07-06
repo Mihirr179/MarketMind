@@ -278,7 +278,7 @@ function timeframeAccentClass(active: boolean) {
 }
 
 export default function TradingTerminalChart({ fetchChartUrl = "/api/market-chart" }: { fetchChartUrl?: string }) {
-  const { symbol, company, timeframe, enabledIndicators, setSymbol, setTimeframe, toggleIndicator } = useChartState();
+  const { symbol, company, timeframe, enabledIndicators, setTimeframe, toggleIndicator } = useChartState();
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
@@ -313,15 +313,7 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
   }, [displayedQuote, candles, priceChange]);
 
   const TIMEFRAMES: Timeframe[] = ["1D", "5D", "1M", "3M", "6M", "1Y", "5Y", "MAX"];
-  const INDICATOR_KEYS: IndicatorKey[] = [
-    "SMA",
-    "EMA",
-    "RSI",
-    "MACD",
-    "Bollinger Bands",
-    "VWAP",
-    "Volume",
-  ];
+  const INDICATOR_KEYS: IndicatorKey[] = ["SMA", "EMA", "RSI", "MACD", "Bollinger Bands", "VWAP", "Volume"];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -336,11 +328,12 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
           `${fetchChartUrl}?symbol=${encodeURIComponent(symbol)}&range=${timeframe}`,
           { signal: controller.signal }
         );
-        const data = await res.json();
-        const normalized = normalizeCandles(Array.isArray(data?.candles) ? data.candles : []);
+
+        const payload = await res.json();
+        const normalized = normalizeCandles(Array.isArray(payload?.candles) ? payload.candles : []);
 
         if (!res.ok || normalized.length < 2) {
-          throw new Error(data?.error || "Live market data is unavailable");
+          throw new Error(payload?.error || "Live market data is unavailable");
         }
 
         setCandles(normalized);
@@ -362,7 +355,6 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
     return () => controller.abort();
   }, [fetchChartUrl, reloadKey, symbol, timeframe]);
 
-  // Create chart instance (non-fullscreen)
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) return;
@@ -374,25 +366,15 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
       layout: {
         background: { type: ColorType.Solid, color: "#0a0a0a" },
         textColor: "#a1a1aa",
-        panes: {
-          separatorColor: "#27272a",
-          separatorHoverColor: "#facc154d",
-          enableResize: true,
-        },
+        panes: { separatorColor: "#27272a", separatorHoverColor: "#facc154d", enableResize: true },
       },
-      grid: {
-        vertLines: { color: "#18181b" },
-        horzLines: { color: "#18181b" },
-      },
+      grid: { vertLines: { color: "#18181b" }, horzLines: { color: "#18181b" } },
       crosshair: {
         mode: CrosshairMode.Normal,
         vertLine: { color: "#facc1580", labelBackgroundColor: "#facc15", width: 1 },
         horzLine: { color: "#71717a80", labelBackgroundColor: "#27272a", width: 1 },
       },
-      rightPriceScale: {
-        borderColor: "#27272a",
-        scaleMargins: { top: 0.08, bottom: 0.08 },
-      },
+      rightPriceScale: { borderColor: "#27272a", scaleMargins: { top: 0.08, bottom: 0.08 } },
       timeScale: {
         borderColor: "#27272a",
         timeVisible: true,
@@ -421,18 +403,13 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
       candles.map<CandlestickData<Time>>((c) => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close }))
     );
 
-    // Volume
     const showVolume = enabledIndicators.has("Volume");
-    const volumeSeries = chart.addSeries(
-      HistogramSeries,
-      {
-        priceFormat: { type: "volume" },
-        priceScaleId: "volume",
-        lastValueVisible: false,
-        priceLineVisible: false,
-      },
-      1
-    );
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: "volume" },
+      priceScaleId: "volume",
+      lastValueVisible: false,
+      priceLineVisible: false,
+    }, 1);
 
     volumeSeries.setData(
       candles.map<HistogramData<Time>>((c) => ({
@@ -444,23 +421,9 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
 
     chart.priceScale("volume", 1).applyOptions({ scaleMargins: { top: 0.1, bottom: 0 }, borderVisible: false });
 
-    // Indicators: draw on main pane (0) except RSI/MACD (we keep them in additional panes if enabled)
-    // SMA/EMA
     if (enabledIndicators.has("SMA")) {
-      const sma20 = chart.addSeries(LineSeries, {
-        color: "#facc15",
-        lineWidth: 2,
-        priceLineVisible: false,
-        lastValueVisible: false,
-        title: "SMA 20",
-      });
-      const sma50 = chart.addSeries(LineSeries, {
-        color: "#a78bfa",
-        lineWidth: 2,
-        priceLineVisible: false,
-        lastValueVisible: false,
-        title: "SMA 50",
-      });
+      const sma20 = chart.addSeries(LineSeries, { color: "#facc15", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, title: "SMA 20" });
+      const sma50 = chart.addSeries(LineSeries, { color: "#a78bfa", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, title: "SMA 50" });
       sma20.setData(calculateSma(candles, 20));
       sma50.setData(calculateSma(candles, 50));
     }
@@ -472,7 +435,9 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
       const e20 = calculateEma(closes, 20);
       const e50 = calculateEma(closes, 50);
 
-      const toLine = (arr: Array<number | null>) => arr.map((v, i) => (v == null ? null : ({ time: candles[i].time, value: v } as LineData<Time>))).filter(Boolean) as LineData<Time>[];
+      const toLine = (arr: Array<number | null>) =>
+        arr.map((v, i) => (v == null ? null : ({ time: candles[i].time, value: v } as LineData<Time>))).filter(Boolean) as LineData<Time>[];
+
       ema20.setData(toLine(e20));
       ema50.setData(toLine(e50));
     }
@@ -493,10 +458,10 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
       s.setData(vwap);
     }
 
-    // RSI
     if (enabledIndicators.has("RSI")) {
       const rsiSeries = chart.addSeries(LineSeries, { color: "#60a5fa", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, title: "RSI 14" }, 2);
       rsiSeries.setData(calculateRsi(candles));
+
       const p2 = chart.priceScale("right", 2);
       p2.applyOptions({ autoScale: false, scaleMargins: { top: 0.1, bottom: 0.1 } });
 
@@ -504,24 +469,15 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
       rsiSeries.createPriceLine({ price: 30, color: "#22c55e80", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "30" });
     }
 
-    // MACD
     if (enabledIndicators.has("MACD")) {
       const { macd, signal, histogram } = calculateMacd(candles);
-      const histogramSeries = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false, title: "MACD" }, 2);
-      const macdSeries = chart.addSeries(LineSeries, { color: "#facc15", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, title: "MACD" }, 2);
-      const signalSeries = chart.addSeries(LineSeries, { color: "#fb7185", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, title: "Signal" }, 2);
-
-      histogramSeries.setData(histogram);
-      macdSeries.setData(macd);
-      signalSeries.setData(signal);
+      chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false, title: "MACD" }, 2).setData(histogram);
+      chart.addSeries(LineSeries, { color: "#facc15", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, title: "MACD" }, 2).setData(macd);
+      chart.addSeries(LineSeries, { color: "#fb7185", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, title: "Signal" }, 2).setData(signal);
     }
 
-    // Volume toggle (simple approach)
-    // If volume disabled: hide volume pane by shrinking it.
     const panes = chart.panes();
-    // pane[1] is volume if exists; other panes are created by adding series with paneIndex.
     if (!showVolume) panes[1]?.setHeight(0);
-
     panes[0]?.setHeight(enabledIndicators.has("RSI") || enabledIndicators.has("MACD") ? 430 : 470);
     if (enabledIndicators.has("RSI") || enabledIndicators.has("MACD")) {
       panes[1]?.setHeight(110);
@@ -537,9 +493,9 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
         setQuote(null);
         return;
       }
-      const data = p.seriesData.get(candleSeries) as CandlestickData<Time> | undefined;
-      if (data && "open" in data) {
-        setQuote({ open: data.open, high: data.high, low: data.low, close: data.close });
+      const crosshairData = p.seriesData.get(candleSeries) as CandlestickData<Time> | undefined;
+      if (crosshairData && "open" in crosshairData) {
+        setQuote({ open: crosshairData.open, high: crosshairData.high, low: crosshairData.low, close: crosshairData.close });
       }
     };
 
@@ -551,27 +507,12 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
     };
   }, [candles, enabledIndicators]);
 
-  const resetZoom = () => {
-    // lightweight-charts doesn't expose a simple public global refit API.
-    // We keep this production-safe by reloading series data (best-effort).
-    setReloadKey((k) => k + 1);
-  };
-
-  const zoomIn = () => {
-    // Use timeScale zoom via applyOptions (best-effort). If no effect, reload is safe.
-    // Note: to keep production-safe, avoid complex internal API use.
-    setReloadKey((k) => k + 1);
-  };
-
-  const zoomOut = () => {
-    setReloadKey((k) => k + 1);
-  };
-
-  const applySymbol = (next: string) => setSymbol(next);
+  const resetZoom = () => setReloadKey((k) => k + 1);
+  const zoomIn = () => setReloadKey((k) => k + 1);
+  const zoomOut = () => setReloadKey((k) => k + 1);
 
   return (
     <GlassCard className="p-0 overflow-hidden rounded-2xl border border-zinc-800 bg-[#111111] shadow-2xl shadow-black/20">
-      {/* Header */}
       <div className="border-b border-zinc-800 p-4 sm:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex items-start gap-3">
@@ -597,8 +538,7 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
                   Daily change{" "}
                   <span className={priceChange >= 0 ? "text-emerald-400 font-semibold" : "text-red-400 font-semibold"}>
                     {priceChange >= 0 ? "+" : ""}
-                    {priceChange >= 0 ? "" : ""}
-                    {displayedQuote ? `${priceChange >= 0 ? "" : ""}${priceChange.toFixed(2)} (${priceChangePercent.toFixed(2)}%)` : "—"}
+                    {displayedQuote ? `${priceChange.toFixed(2)} (${priceChangePercent.toFixed(2)}%)` : "—"}
                   </span>
                 </span>
                 <span className="ml-auto hidden sm:inline-flex items-center gap-2">
@@ -611,7 +551,6 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
             </div>
           </div>
 
-          {/* Zoom + Fullscreen toolbar */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -637,7 +576,6 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
           </div>
         </div>
 
-        {/* Timeframes + Indicators */}
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
             {TIMEFRAMES.map((t) => (
@@ -662,7 +600,9 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
                   type="button"
                   onClick={() => toggleIndicator(k)}
                   className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
-                    enabled ? "border-yellow-400/70 bg-yellow-400/10 text-yellow-400" : "border-zinc-700 bg-black/40 text-zinc-400 hover:border-zinc-500 hover:text-white"
+                    enabled
+                      ? "border-yellow-400/70 bg-yellow-400/10 text-yellow-400"
+                      : "border-zinc-700 bg-black/40 text-zinc-400 hover:border-zinc-500 hover:text-white"
                   }`}
                 >
                   {k}
@@ -672,7 +612,6 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
           </div>
         </div>
 
-        {/* Basic drawing tools placeholder */}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
           <span className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-black/20 px-3 py-2">
             <span className="text-white font-semibold">Drawing:</span> Line • Horizontal Ray (beta)
@@ -683,7 +622,6 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
         </div>
       </div>
 
-      {/* Chart Area */}
       <div className="relative bg-[#0a0a0a]">
         <div ref={chartContainerRef} className="h-[520px] w-full sm:h-[560px]" aria-label="Trading terminal chart" />
 
@@ -703,7 +641,6 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
         )}
       </div>
 
-      {/* Fullscreen Overlay */}
       {isFullscreen && (
         <div className="fixed inset-0 z-[100] bg-[#07070A]/90 backdrop-blur-2xl p-4">
           <div className="mx-auto max-w-[1400px]">
@@ -728,12 +665,9 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
             </div>
 
             <div ref={fullscreenRef} className="rounded-2xl overflow-hidden border border-zinc-800 bg-[#0a0a0a]">
-              {/* Reuse same chart by rendering another chart container; lightweight-charts will be recreated on candles/indicators change. */}
               <div className="h-[78vh] w-full" />
             </div>
           </div>
-
-          {/* Note: drawing fullscreen re-instantiation is out of scope; we keep UI close to requirement. */}
         </div>
       )}
     </GlassCard>

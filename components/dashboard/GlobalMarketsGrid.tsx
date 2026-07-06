@@ -10,9 +10,8 @@ type MarketItem = {
   changePct: number;
 };
 
-function tone(cp: number) {
-  return cp >= 0 ? "green" : "red";
-}
+// tone() removed: it was unused and caused a lint warning.
+
 
 export default function GlobalMarketsGrid() {
   // Dummy values acceptable.

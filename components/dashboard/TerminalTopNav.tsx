@@ -1,15 +1,17 @@
 "use client";
 
-import { Bell, Settings, Search, UserRound, Globe, AlertTriangle } from "lucide-react";
+import { Bell, Settings, UserRound, Globe, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import SearchAutocomplete from "@/components/ui/SearchAutocomplete";
 
 import { useEffect, useMemo, useState } from "react";
+import type { MarketSession } from "@/utils/marketStatus";
+import { getMarketStatus } from "@/utils/marketStatus";
 
 export default function TerminalTopNav() {
   const [userName, setUserName] = useState<string>("User");
   const [search, setSearch] = useState("");
-  const [marketOpen, setMarketOpen] = useState<boolean>(true);
+  const [marketStatus, setMarketStatus] = useState<MarketSession>(() => getMarketStatus(new Date()));
 
   useEffect(() => {
     try {
@@ -24,25 +26,13 @@ export default function TerminalTopNav() {
   }, []);
 
   useEffect(() => {
-    // Demo market status indicator that doesn\'t break integrations.
-    // If you later have a real market status API, replace this logic.
-    const tick = () => {
-      const now = new Date();
-      const day = now.getDay(); // 0 Sun - 6 Sat
-      const hour = now.getHours();
-      const minute = now.getMinutes();
-      const minutes = hour * 60 + minute;
+    const id = window.setInterval(() => {
+      setMarketStatus(getMarketStatus(new Date()));
+    }, 30_000);
 
-      // Approx US market hours (9:30 - 16:00) in local time.
-      const isWeekend = day === 0 || day === 6;
-      const isOpen = !isWeekend && minutes >= 9 * 60 + 30 && minutes <= 16 * 60;
-      setMarketOpen(isOpen);
-    };
-
-    tick();
-    const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
   }, []);
+
 
   const initials = useMemo(() => {
     const parts = userName.split(/\s+/).filter(Boolean);
@@ -79,17 +69,16 @@ export default function TerminalTopNav() {
         </div>
 
         {/* Market Status */}
-
         <div className="hidden lg:flex items-center gap-3">
           <div className="flex items-center gap-2 rounded-xl border border-[#27272A] bg-[#18181B]/40 px-3 py-2">
             <Globe size={16} className="text-zinc-400" />
             <div className="min-w-[90px]">
               <div className="text-[11px] font-bold tracking-wider text-zinc-500">Market</div>
-              <div className={`text-sm font-bold ${marketOpen ? "text-emerald-400" : "text-red-400"}`}>
-                {marketOpen ? "Open" : "Closed"}
+              <div className={`text-sm font-bold ${marketStatus.isOpen ? "text-emerald-400" : "text-red-400"}`}>
+                {marketStatus.isOpen ? "Open" : "Closed"}
               </div>
             </div>
-            {!marketOpen && <AlertTriangle size={16} className="text-red-400" />}
+            {!marketStatus.isOpen && <AlertTriangle size={16} className="text-red-400" />}
           </div>
         </div>
 
@@ -133,8 +122,8 @@ export default function TerminalTopNav() {
             <Globe size={14} />
             <span>Market status</span>
           </div>
-          <div className={`font-bold ${marketOpen ? "text-emerald-400" : "text-red-400"}`}>
-            {marketOpen ? "Open" : "Closed"}
+          <div className={`font-bold ${marketStatus.isOpen ? "text-emerald-400" : "text-red-400"}`}>
+            {marketStatus.isOpen ? "Open" : "Closed"}
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+
   ArrowDownRight,
   ArrowUpRight,
   LineChart,
@@ -9,6 +10,10 @@ import {
   TrendingUp,
 } from "lucide-react";
 import GlassCard from "@/components/ui/GlassCard";
+import { useEffect, useState } from "react";
+import { getMarketStatus } from "@/utils/marketStatus";
+
+
 
 type Tone = "green" | "red" | "yellow";
 
@@ -47,18 +52,37 @@ function Badge({ tone, children }: { tone: Tone; children: React.ReactNode }) {
 }
 
 export default function TerminalMetricCards() {
-  // Dummy values for sprint UI only.
-  const portfolioValue = 54210;
-  const todayPnL = 1245;
-  const todayPnLPercent = 5.3;
+  const [marketStatus, setMarketStatus] = useState(() => getMarketStatus(new Date()));
 
-  const marketOpen = true;
+
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setMarketStatus(getMarketStatus(new Date()));
+    }, 30_000);
+
+    return () => window.clearInterval(id);
+  }, []);
+
+
+  const portfolioValue = null as number | null;
+  const todayPnL = null as number | null;
+  const todayPnLPercent = null as number | null;
+
+
+
+  const marketOpen = marketStatus.isOpen;
   const marketStatusText = marketOpen ? "OPEN" : "CLOSED";
 
-  const fearGreedValue = 72;
-  const fearGreedTone: Tone = "green";
 
-  const pnlTone: Tone = todayPnL >= 0 ? "green" : "red";
+
+  const fearGreedValue = null;
+
+  const fearGreedTone: Tone = "yellow";
+
+
+  const pnlTone: Tone = typeof todayPnL === "number" && todayPnL >= 0 ? "green" : "red";
+
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -68,14 +92,16 @@ export default function TerminalMetricCards() {
           <div>
             <div className="text-xs text-zinc-400 font-medium">Portfolio Value</div>
             <div className="mt-2 flex items-baseline gap-3">
-              <div className="text-3xl font-bold tabular-nums text-[#FACC15]">{portfolioValue.toLocaleString()}</div>
+              <div className="text-3xl font-bold tabular-nums text-[#FACC15]">{portfolioValue == null ? "--" : portfolioValue.toLocaleString()}</div>
+
             </div>
             <div className="mt-2 flex items-center gap-2 text-sm">
               <span className={pnlTone === "green" ? "text-emerald-400" : "text-red-400"}>
-                {todayPnL >= 0 ? "+" : ""}
-                {todayPnL.toLocaleString()}
+                {todayPnL == null ? "--" : `${todayPnL >= 0 ? "+" : ""}${todayPnL.toLocaleString()}`}
+
               </span>
-              <span className="text-zinc-500">({todayPnLPercent.toFixed(2)}%)</span>
+              <span className="text-zinc-500">{todayPnLPercent == null ? "(-- )" : `(${todayPnLPercent.toFixed(2)}%)`}</span>
+
             </div>
           </div>
 
@@ -99,32 +125,40 @@ export default function TerminalMetricCards() {
             <div className="mt-3 flex items-baseline gap-3">
               <div
                 className={`text-2xl font-bold tabular-nums ${
-                  todayPnL >= 0 ? "text-emerald-400" : "text-red-400"
+                  (todayPnL ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"
                 }`}
+
               >
-                {todayPnL >= 0 ? "+" : ""}
-                {todayPnL.toLocaleString()}
+                {todayPnL == null ? "--" : `${todayPnL >= 0 ? "+" : ""}${todayPnL.toLocaleString()}`}
+
               </div>
               <div
-                className={`text-sm font-bold ${todayPnL >= 0 ? "text-emerald-300" : "text-red-300"}`}
+                  className={`text-sm font-bold ${(todayPnL ?? 0) >= 0 ? "text-emerald-300" : "text-red-300"}`}
+
+
               >
-                ({todayPnLPercent.toFixed(2)}%)
+                {todayPnLPercent == null ? "--" : `(${todayPnLPercent.toFixed(2)}%)`}
+
               </div>
             </div>
           </div>
 
           <div className="grid size-11 place-items-center rounded-xl border border-zinc-800 bg-black/30">
-            {todayPnL >= 0 ? <ArrowUpRight size={18} className="text-emerald-400" /> : <ArrowDownRight size={18} className="text-red-400" />}
+            {todayPnL == null ? "--" : todayPnL >= 0 ? <ArrowUpRight size={18} className="text-emerald-400" /> : <ArrowDownRight size={18} className="text-red-400" />}
+
           </div>
         </div>
 
-        <div className="mt-4 h-16 rounded-2xl border border-zinc-800/70 bg-black/20 flex items-center justify-between px-4">
+          <div className="mt-4 h-16 rounded-2xl border border-zinc-800/70 bg-black/20 flex items-center justify-between px-4">
+
           <div className="flex items-center gap-2 text-xs text-zinc-400">
             <LineChart size={14} /> Daily momentum
           </div>
-          <div className={todayPnL >= 0 ? "text-emerald-300" : "text-red-300"}>
-            {todayPnL >= 0 ? "+" : ""}
-            {Math.abs(todayPnLPercent).toFixed(2)}%
+          <div className={(todayPnL ?? 0) >= 0 ? "text-emerald-300" : "text-red-300"}>
+
+            {todayPnLPercent == null ? "--" : `${(todayPnL ?? 0) >= 0 ? "+" : ""}${Math.abs(todayPnLPercent).toFixed(2)}%`}
+
+
           </div>
         </div>
       </GlassCard>
@@ -160,7 +194,8 @@ export default function TerminalMetricCards() {
           <div>
             <div className="text-xs text-zinc-400 font-medium">Fear &amp; Greed</div>
             <div className="mt-2 flex items-baseline gap-3">
-              <div className="text-3xl font-bold tabular-nums text-white">{fearGreedValue}</div>
+              <div className="text-3xl font-bold tabular-nums text-white">{fearGreedValue == null ? "--" : fearGreedValue}</div>
+
               <div className="text-sm text-zinc-500">/ 100</div>
             </div>
             <div className="mt-3">
