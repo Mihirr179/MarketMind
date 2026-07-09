@@ -513,7 +513,7 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
 
   return (
     <GlassCard className="p-0 overflow-hidden rounded-2xl border border-zinc-800 bg-[#111111] shadow-2xl shadow-black/20">
-      <div className="border-b border-zinc-800 p-4 sm:p-5">
+      <div className="border-b border-zinc-800 p-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex items-start gap-3">
             <span className="grid size-10 place-items-center rounded-xl bg-yellow-400/10 text-yellow-400 border border-yellow-400/30">
@@ -623,7 +623,8 @@ export default function TradingTerminalChart({ fetchChartUrl = "/api/market-char
       </div>
 
       <div className="relative bg-[#0a0a0a]">
-        <div ref={chartContainerRef} className="h-[520px] w-full sm:h-[560px]" aria-label="Trading terminal chart" />
+        <div ref={chartContainerRef} className="min-h-[620px] max-h-[720px] w-full" aria-label="Trading terminal chart" />
+
 
         {loading && (
           <div className="absolute inset-0 z-10 grid place-items-center bg-[#0a0a0a]/80 backdrop-blur-sm">

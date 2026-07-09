@@ -19,12 +19,15 @@ type DailyBriefPayload = {
 const CACHE_KEY = "marketmind_daily_brief";
 
 function todayLabel(d: Date) {
-  return d.toLocaleDateString(undefined, {
+  // SSR/CSR stable: fixed locale + time zone so the output is identical.
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "2-digit",
-  });
+    timeZone: "UTC",
+  }).format(d);
 }
+
 
 function sentimentTone(sentiment: BriefSentiment) {
   switch (sentiment) {

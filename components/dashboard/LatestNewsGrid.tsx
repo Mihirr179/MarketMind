@@ -1,6 +1,8 @@
 "use client";
 
+import React from "react";
 import GlassCard from "@/components/ui/GlassCard";
+
 
 
 type NewsItem = {
@@ -51,6 +53,27 @@ export default function LatestNewsGrid({
   items: NewsItem[];
   loading: boolean;
 }) {
+  const [sentimentFilter, setSentimentFilter] = React.useState<
+    NewsSentiment | "All"
+  >("All");
+  const [impactFilter, setImpactFilter] = React.useState<
+    ImpactLevel | "All"
+  >("All");
+
+  // NOTE: computeSentiment/Impact are intentionally heuristic-based and local,
+  // so filtering is instant and requires no backend changes.
+  const normalized = Array.isArray(items) ? items : [];
+
+  const filtered = normalized.filter((n) => {
+    const sentiment = computeSentimentFromTitle(n.title) ?? "Neutral";
+    const impact = computeImpactFromTitle(n.title) ?? "Medium";
+
+    const sentimentOk = sentimentFilter === "All" ? true : sentiment === sentimentFilter;
+    const impactOk = impactFilter === "All" ? true : impact === impactFilter;
+
+    return sentimentOk && impactOk;
+  });
+
   return (
     <GlassCard className="p-5 sm:p-6 rounded-2xl">
       <div className="flex items-center justify-between gap-3">
@@ -62,7 +85,45 @@ export default function LatestNewsGrid({
       </div>
 
       <div className="mt-4">
-        <AINewsInsights items={items} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {(["All", "Bullish", "Neutral", "Bearish"] as const).map((v) => (
+              <button
+                key={`sent-${v}`}
+                type="button"
+                onClick={() => setSentimentFilter(v)}
+                className={
+                  v === sentimentFilter
+                    ? "px-3 py-1.5 rounded-full border border-[#FACC15]/60 bg-[#FACC15]/10 text-[#FACC15] font-semibold"
+                    : "px-3 py-1.5 rounded-full border border-zinc-800/70 bg-black/20 text-zinc-300 hover:text-white hover:border-[#FACC15]/25"
+                }
+              >
+                {v === "All" ? "Sentiment: All" : `Sentiment: ${v}`}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {(["All", "High", "Medium", "Low"] as const).map((v) => (
+              <button
+                key={`imp-${v}`}
+                type="button"
+                onClick={() => setImpactFilter(v)}
+                className={
+                  v === impactFilter
+                    ? "px-3 py-1.5 rounded-full border border-[#FACC15]/60 bg-[#FACC15]/10 text-[#FACC15] font-semibold"
+                    : "px-3 py-1.5 rounded-full border border-zinc-800/70 bg-black/20 text-zinc-300 hover:text-white hover:border-[#FACC15]/25"
+                }
+              >
+                {v === "All" ? "Impact: All" : `Impact: ${v}`}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <AINewsInsights items={filtered} />
       </div>
 
       <div className="mt-5">
@@ -77,13 +138,13 @@ export default function LatestNewsGrid({
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
-            {Array.isArray(items) && items.length ? (
-              items.slice(0, 12).map((n, idx) => {
+            {filtered.length ? (
+              filtered.slice(0, 12).map((n, idx) => {
                 const sentiment = computeSentimentFromTitle(n.title) ?? "Neutral";
                 const impact = computeImpactFromTitle(n.title) ?? "Medium";
                 return (
                   <article
-                    key={`${n.source?.name || "Unknown"}-${idx}`}
+                    key={`${n.source?.name || "Unknown"}-${idx}-${sentiment}-${impact}`}
                     className="rounded-2xl border border-zinc-800/70 bg-black/20 p-4 transition hover:border-[#FACC15]/40 hover:shadow-[0_0_30px_rgba(250,204,21,0.10)]"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -118,15 +179,18 @@ export default function LatestNewsGrid({
                 );
               })
             ) : (
-              <div className="text-sm text-zinc-500">No news available.</div>
+              <div className="text-sm text-zinc-500">
+                No headlines match the selected news lens.
+              </div>
             )}
           </div>
         )}
       </div>
 
-
+      {/* Keep layout stable even when filters change */}
     </GlassCard>
   );
 }
+
 
 
