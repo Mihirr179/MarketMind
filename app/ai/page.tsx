@@ -145,8 +145,9 @@ export default function AIPage() {
     };
   }, []);
 
-  const loadNews = async (sym: string) => {
+  const loadNews = async () => {
     setNewsLoading(true);
+
     setNewsError(null);
     try {
       const res = await fetch("/api/news");
@@ -177,13 +178,9 @@ export default function AIPage() {
 
     setAnalysisError(null);
 
-    const sym = validation.symbol;
-    void sym;
-
-
-
-
     setResult(null);
+    setAnalysisError(null);
+    const sym = validation.symbol;
     setMarketDetails(null);
     setNews([]);
     setNewsError(null);
@@ -195,7 +192,8 @@ export default function AIPage() {
       if (!mdRes.ok || mdData?.error) throw new Error(mdData?.error || "Failed to load market details");
       setMarketDetails(mdData as MarketDetails);
 
-      await loadNews(sym);
+      await loadNews();
+
 
       const aiRes = await fetch("/api/ai-research", {
         method: "POST",
@@ -410,7 +408,8 @@ export default function AIPage() {
           loading={newsLoading}
           error={newsError}
           items={news}
-          onRetry={() => void loadNews(symbolInput.trim().toUpperCase())}
+          onRetry={() => void loadNews()}
+
         />
 
         {analyzing ? null : result ? (
