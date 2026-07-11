@@ -37,27 +37,59 @@ function tone(changePercent?: number) {
 export default function WatchlistPanel() {
   const { setSymbol } = useChartState();
   const [items, setItems] = useState<WatchlistItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  void loading;
+
+
+
+
 
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("watchlist") || "[]");
-      if (Array.isArray(stored)) window.setTimeout(() => setItems(stored), 0);
-      else window.setTimeout(() => setItems([]), 0);
-    } catch {
-      window.setTimeout(() => setItems([]), 0);
+    async function load() {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setItems([]);
+          return;
+        }
+
+        const res = await fetch("/api/watchlist", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          setItems([]);
+          return;
+        }
+
+        const data = (await res.json()) as {
+          success?: boolean;
+          watchlist?: Array<{ symbol: string; companyName?: string; addedAt?: string }>; 
+        };
+
+        if (Array.isArray(data.watchlist)) {
+          setItems(
+            data.watchlist.map((x) => ({
+              symbol: x.symbol,
+              name: x.companyName,
+            }))
+          );
+        }
+      } catch {
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
     }
+
+    void load();
   }, []);
 
-
-  useEffect(() => {
-    // Persist in the same shape the current app expects.
-    try {
-      localStorage.setItem("watchlist", JSON.stringify(items));
-    } catch {
-      // ignore
-    }
-  }, [items]);
 
   const [dragSymbol, setDragSymbol] = useState<string | null>(null);
 
@@ -77,12 +109,70 @@ export default function WatchlistPanel() {
     setDragSymbol(null);
   };
 
-  const addQuick = (symbol: string) => {
-    setItems((prev) => {
-      if (prev.some((p) => p.symbol === symbol)) return prev;
-      return [{ symbol }, ...prev];
-    });
+  const addQuick = async (symbol: string) => {
+    const normalized = symbol.trim().toUpperCase();
+
+    // If user isn't logged in (token missing), show message requirement.
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      // Lightweight: using alert (no toast library found in repo).
+      // Requirement says toast notifications; if a toast util exists, we can wire it later.
+      window.alert("Login to save your watchlist.");
+      return;
+    }
+
+    const exists = items.some((p) => p.symbol === normalized);
+    if (exists) {
+      window.alert("Already exists");
+      return;
+    }
+
+    const prevItems = items;
+    setItems((prev) => [{ symbol: normalized }, ...prev]);
+
+    try {
+      const res = await fetch("/api/watchlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ symbol: normalized }),
+      });
+
+      if (res.status === 409) {
+        setItems(prevItems);
+        window.alert("Already exists");
+        return;
+      }
+
+      if (!res.ok) {
+        setItems(prevItems);
+        window.alert("Failed to save");
+        return;
+      }
+
+      const data = (await res.json()) as {
+        success?: boolean;
+        watchlist?: Array<{ symbol: string; companyName?: string; addedAt?: string }>;
+      };
+
+      if (Array.isArray(data.watchlist)) {
+        setItems(
+          data.watchlist.map((x) => ({
+            symbol: x.symbol,
+            name: x.companyName,
+          }))
+        );
+      }
+
+      window.alert("Added to Watchlist");
+    } catch {
+      setItems(prevItems);
+      window.alert("Failed to save");
+    }
   };
+
 
   return (
     <GlassCard className="p-5">
@@ -101,13 +191,14 @@ export default function WatchlistPanel() {
             <button
               key={x.s}
               type="button"
-              onClick={() => addQuick(x.s)}
+              onClick={() => void addQuick(x.s)}
               className="rounded-xl border border-[#27272A] bg-[#18181B]/40 px-3 py-2 text-xs text-zinc-300 hover:border-[#FACC15]/40 hover:text-white transition"
             >
               + {x.label}
             </button>
           ))}
         </div>
+
       </div>
 
       <div className="mt-4 space-y-2">

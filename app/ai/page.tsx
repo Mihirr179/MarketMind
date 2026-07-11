@@ -1,353 +1,517 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Bell, User, RotateCcw, Send } from "lucide-react";
 
-import {
-  Brain,
-  BarChart3,
-  Briefcase,
-  FileText,
-  Bell,
-  User,
-} from "lucide-react";
+import TradingTerminalChart from "@/components/dashboard/TradingTerminalChart";
+import { ChartStateProvider } from "@/components/dashboard/ChartStateContext";
 
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "recharts";
+import SkeletonSection from "@/components/dashboard/SkeletonSection";
+import NewsCardList, { type NewsArticle } from "@/components/dashboard/NewsCardList";
+import AiResearchResultCards, {
+  type AiResearchStructuredResult,
+} from "@/components/dashboard/AiResearchResultCards";
 
-type AlphaVantageGlobalQuoteResponse = {
-  "Global Quote"?: {
-    "01. symbol"?: string;
-    "05. price"?: string;
-    "09. changes"?: string;
-    "10. change percent"?: string;
-  };
-  Note?: string;
-  Error?: string;
+type MarketDetails = {
+  symbol: string;
+  currency?: string;
+  name?: string;
+
+  price: number;
+  dailyChange: number;
+  dailyChangePercent: number;
+  volume: number;
+
+  week52High: number;
+  week52Low: number;
+
+  marketCap: number;
+  peRatio: number | null;
+  eps: number | null;
+  beta: number | null;
+
+  sector: string | null;
+  industry: string | null;
 };
 
-function formatUSDOrNumber(value?: string) {
-  if (!value) return "—";
-  const n = Number(value);
-  if (Number.isNaN(n)) return value;
-  return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
+function formatNumber(v: number | null | undefined) {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return v.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
+function formatMoney(v: number | null | undefined) {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(v);
+}
+
+function normalizeNewsImpactSentiment(articles: unknown[]): NewsArticle[] {
+  return (Array.isArray(articles) ? articles : []).map((a) => {
+    const item = a as Record<string, unknown>;
+    return {
+      source: (item?.source as NewsArticle["source"]) ?? undefined,
+      publishedAt: typeof item?.publishedAt === "string" ? item.publishedAt : undefined,
+      title: typeof item?.title === "string" ? item.title : undefined,
+      url: typeof item?.url === "string" ? item.url : undefined,
+    };
+  });
+}
+
+function validateTicker(raw: string) {
+  const s = raw.trim().toUpperCase();
+  if (!s) return { ok: false as const, error: "Ticker is required" };
+  if (!/^[A-Z0-9.-]{1,12}$/.test(s)) return { ok: false as const, error: "Invalid ticker" };
+  return { ok: true as const, symbol: s };
+}
+
+type ChatMessage = { role: "user" | "ai"; text: string };
+
 export default function AIPage() {
-  const [symbol, setSymbol] = useState("AAPL");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [quote, setQuote] = useState<AlphaVantageGlobalQuoteResponse | null>(null);
+  const [symbolInput, setSymbolInput] = useState("AAPL");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [marketDetails, setMarketDetails] = useState<MarketDetails | null>(null);
+  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
 
-  const chartData = useMemo(
-    () => [
-      { day: "Mon", value: 120 },
-      { day: "Tue", value: 150 },
-      { day: "Wed", value: 140 },
-      { day: "Thu", value: 180 },
-      { day: "Fri", value: 210 },
-      { day: "Sat", value: 190 },
-      { day: "Sun", value: 250 },
-    ],
-    []
-  );
+  const [result, setResult] = useState<AiResearchStructuredResult | null>(null);
+  const [reports, setReports] = useState<
+    Array<{
+      ticker: string;
+      recommendation: string;
+      confidence: number;
+      risk: string;
+      timestamp: string;
+      summary: string;
+    }>
+  >([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsError, setReportsError] = useState<string | null>(null);
 
-  const globalQuote = quote?.["Global Quote"];
-  const price = formatUSDOrNumber(globalQuote?.["05. price"]);
-  const changes = formatUSDOrNumber(globalQuote?.["09. changes"]);
-  const changePercentRaw = globalQuote?.["10. change percent"];
-  const changePercent = changePercentRaw ? changePercentRaw.replace("%", "%") : null;
+  const [chatOpen] = useState(true);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      role: "ai",
+      text: "Ask about today’s movement, fundamentals (PE/EPS), technical levels, or risk factors. Your last analysis context is used automatically.",
+    },
+  ]);
 
-  const handleAnalyze = async () => {
-    const trimmed = symbol.trim().toUpperCase();
-    if (!trimmed) return;
+  const lastContext = useMemo(() => {
+    if (!marketDetails || !result) return null;
+    return {
+      marketDetails,
+      news,
+      technicalFromChart: null,
+      aiResult: result,
+    };
+  }, [marketDetails, news, result]);
 
-    setLoading(true);
-    setError(null);
-    setQuote(null);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadReports() {
+      setReportsLoading(true);
+      setReportsError(null);
+      try {
+        const res = await fetch("/api/reports");
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok || data?.error) throw new Error(data?.error || "Failed to load reports");
 
-    try {
-      const res = await fetch(`/api/search?symbol=${encodeURIComponent(trimmed)}`);
-      const data = (await res.json()) as (AlphaVantageGlobalQuoteResponse & { error?: string });
+        const items: unknown[] = Array.isArray(data?.items) ? data.items : [];
+        const mapped = (items as Array<Record<string, unknown>>).map((it) => ({
+          ticker: typeof it?.ticker === "string" ? it.ticker : "",
+          recommendation: typeof it?.recommendation === "string" ? it.recommendation : "",
+          confidence: typeof it?.confidence === "number" ? it.confidence : 0,
+          risk: typeof it?.risk === "string" ? it.risk : "",
+          timestamp: typeof it?.timestamp === "string" ? it.timestamp : "",
+          summary: typeof it?.summary === "string" ? it.summary : "",
+        }));
 
-      if (!res.ok || data?.error) {
-        setError(data?.error || "Failed to analyze symbol");
-        return;
+        setReports(mapped.filter((m) => m.ticker));
+      } catch (e: unknown) {
+        if (cancelled) return;
+        setReportsError(e instanceof Error ? e.message : "Failed to load reports");
+      } finally {
+        if (!cancelled) setReportsLoading(false);
       }
-
-      setQuote(data);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Network error";
-      setError(message);
-    } finally {
-      setLoading(false);
     }
 
+    void loadReports();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loadNews = async (sym: string) => {
+    setNewsLoading(true);
+    setNewsError(null);
+    try {
+      const res = await fetch("/api/news");
+      const data = await res.json();
+      if (!res.ok || data?.error) throw new Error(data?.error || "Failed to load news");
+
+      const articles =
+        Array.isArray(data?.articles) ? data.articles : Array.isArray(data) ? data : [];
+
+      setNews(normalizeNewsImpactSentiment(articles).slice(0, 8));
+      if (!articles || articles.length === 0) setNews([]);
+    } catch (e: unknown) {
+      setNewsError(e instanceof Error ? e.message : "Failed to load news");
+      setNews([]);
+    } finally {
+      setNewsLoading(false);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (analyzing) return;
+
+    const validation = validateTicker(symbolInput);
+    if (!validation.ok) {
+      setAnalysisError(validation.error);
+      return;
+    }
+
+    setAnalysisError(null);
+
+    const sym = validation.symbol;
+    void sym;
+
+
+
+
+    setResult(null);
+    setMarketDetails(null);
+    setNews([]);
+    setNewsError(null);
+
+    setAnalyzing(true);
+    try {
+      const mdRes = await fetch(`/api/market-details?symbol=${encodeURIComponent(sym)}`);
+      const mdData = await mdRes.json();
+      if (!mdRes.ok || mdData?.error) throw new Error(mdData?.error || "Failed to load market details");
+      setMarketDetails(mdData as MarketDetails);
+
+      await loadNews(sym);
+
+      const aiRes = await fetch("/api/ai-research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol: sym }),
+      });
+      const aiData = await aiRes.json();
+
+      if (!aiRes.ok || aiData?.error) throw new Error(aiData?.error || "AI analysis failed");
+
+      setResult(aiData?.result as AiResearchStructuredResult);
+
+      const repRes = await fetch("/api/reports");
+      const repData = await repRes.json();
+      if (repRes.ok && !repData?.error && Array.isArray(repData?.items)) {
+        setReports(
+          repData.items.map((it: unknown) => {
+            const item = it as Record<string, unknown>;
+            return {
+              ticker: typeof item?.ticker === "string" ? item.ticker : "",
+              recommendation: typeof item?.recommendation === "string" ? item.recommendation : "",
+              confidence: typeof item?.confidence === "number" ? item.confidence : 0,
+              risk: typeof item?.risk === "string" ? item.risk : "",
+              timestamp: typeof item?.timestamp === "string" ? item.timestamp : "",
+              summary: typeof item?.summary === "string" ? item.summary : "",
+            };
+          })
+        );
+      }
+    } catch (e: unknown) {
+      setAnalysisError(e instanceof Error ? e.message : "Analyze failed");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const sendChat = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || chatLoading) return;
+
+    setChatError(null);
+    setChatLoading(true);
+
+    const userMsg: ChatMessage = { role: "user", text: trimmed };
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatInput("");
+
+    try {
+      const contextText = lastContext
+        ? `Context:\nMARKET_DETAILS: ${JSON.stringify(lastContext.marketDetails)}\nNEWS: ${JSON.stringify(lastContext.news)}\nAI_RESULT: ${JSON.stringify(lastContext.aiResult)}\n`
+        : `Context: no analysis context available yet. Ask for a new analysis first.`;
+
+      const apiMessages = [
+        { role: "user", content: `${contextText}\nUser question: ${trimmed}` },
+      ];
+
+      const res = await fetch("/api/ai-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data?.error) throw new Error(data?.error || "AI chat failed");
+
+      const reply = String(data?.reply || "").trim();
+      if (!reply) throw new Error("AI returned empty reply");
+
+      setChatMessages((prev) => [...prev, { role: "ai", text: reply }]);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Unknown error";
+      setChatError(message || "AI chat error");
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "ai", text: `Couldn't reach MarketMind AI.\n${message || "Unknown error"}` },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   return (
     <main className="min-h-screen bg-black text-white flex relative overflow-hidden">
-      {/* Background Glow */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_left,#facc15,transparent_35%)]"></div>
         <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_bottom_right,#9333ea,transparent_35%)]"></div>
       </div>
 
-      {/* Main Content */}
-      <section className="flex-1 p-8 relative z-10">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-10">
+      <section className="flex-1 p-8 relative z-10 space-y-6">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-5xl font-bold text-yellow-400">
-              AI Research Center
-            </h1>
-            <p className="text-zinc-400 mt-2">
-              Analyze stocks using AI-powered insights.
-            </p>
+            <h1 className="text-5xl font-bold text-yellow-400">AI Research Center</h1>
+            <p className="text-zinc-400 mt-2">Market details + live news + AI structured research.</p>
           </div>
-
           <div className="flex gap-5">
             <Bell />
             <User />
           </div>
         </div>
 
-        {/* Search */}
-        <div className="flex gap-4 mb-4">
+        <div className="flex gap-4 items-center">
           <input
             type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
+            value={symbolInput}
+            onChange={(e) => setSymbolInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleAnalyze();
+              if (e.key === "Enter") void handleAnalyze();
             }}
             placeholder="Enter Stock Symbol (AAPL, TSLA, RELIANCE)"
-            className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-4"
+            className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-4 outline-none focus:border-yellow-400/50"
+            disabled={analyzing}
           />
 
           <button
-            onClick={handleAnalyze}
-            disabled={loading}
-            className="bg-yellow-400 text-black font-bold px-8 rounded-xl disabled:opacity-50"
+            onClick={() => void handleAnalyze()}
+            disabled={analyzing}
+            className="bg-yellow-400 text-black font-bold px-8 rounded-xl disabled:opacity-60 inline-flex items-center justify-center gap-2"
+            aria-disabled={analyzing}
           >
-            {loading ? "Analyzing..." : "Analyze"}
+            {analyzing ? (
+              <>
+                <span className="h-2.5 w-2.5 rounded-full bg-black animate-pulse" />
+                Analyzing…
+              </>
+            ) : (
+              <>Analyze</>
+            )}
           </button>
         </div>
 
-        {error ? (
-          <div className="mb-8 text-red-400 bg-red-950/40 border border-red-800 rounded-xl px-4 py-3">
-            {error}
+        {analysisError ? (
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {analysisError}
           </div>
         ) : null}
 
-        {/* Portfolio Overview */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-zinc-900 p-5 rounded-2xl">
-            <p className="text-zinc-400">Stock Price</p>
-            <h2 className="text-3xl text-green-400 font-bold">{price}</h2>
-            <p className="text-zinc-500 mt-1">{globalQuote?.["01. symbol"] || "—"}</p>
+        <div className="grid md:grid-cols-4 gap-4">
+          <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800/70">
+            <p className="text-zinc-400 text-xs">Current Price</p>
+            <h2 className="text-3xl text-green-400 font-bold mt-1">{formatMoney(marketDetails?.price)}</h2>
+            <p className="text-zinc-500 mt-1 text-xs">{marketDetails?.name || "—"}</p>
           </div>
-
-          <div className="bg-zinc-900 p-5 rounded-2xl">
-            <p className="text-zinc-400">Today&apos;s Change</p>
+          <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800/70">
+            <p className="text-zinc-400 text-xs">Daily Change</p>
             <h2
-              className={`text-3xl font-bold ${
-                (globalQuote?.["09. changes"] || "0").startsWith("-")
-                  ? "text-red-400"
-                  : "text-green-400"
+              className={`text-3xl font-bold mt-1 ${
+                marketDetails?.dailyChange != null && marketDetails.dailyChange >= 0 ? "text-green-400" : "text-red-400"
               }`}
             >
-              {changes}
+              {marketDetails?.dailyChange != null
+                ? `${marketDetails.dailyChange >= 0 ? "+" : ""}${marketDetails.dailyChange}`
+                : "—"}
             </h2>
-            <p className="text-zinc-500 mt-1">{changePercent || "—"}</p>
+            <p className="text-zinc-500 mt-1 text-xs">
+              {marketDetails?.dailyChangePercent != null
+                ? `${marketDetails.dailyChangePercent >= 0 ? "+" : ""}${marketDetails.dailyChangePercent}%`
+                : "—"}
+            </p>
           </div>
-
-          <div className="bg-zinc-900 p-5 rounded-2xl">
-            <p className="text-zinc-400">Risk Score</p>
-            <h2 className="text-3xl text-yellow-400 font-bold">Medium</h2>
+          <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800/70">
+            <p className="text-zinc-400 text-xs">Market Cap</p>
+            <h2 className="text-3xl text-yellow-400 font-bold mt-1">{formatNumber(marketDetails?.marketCap)}</h2>
+            <p className="text-zinc-500 mt-1 text-xs">
+              52W: {formatNumber(marketDetails?.week52Low)} - {formatNumber(marketDetails?.week52High)}
+            </p>
           </div>
-
-          <div className="bg-zinc-900 p-5 rounded-2xl">
-            <p className="text-zinc-400">AI Accuracy</p>
-            <h2 className="text-3xl text-green-400 font-bold">98%</h2>
+          <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800/70">
+            <p className="text-zinc-400 text-xs">Volume</p>
+            <h2 className="text-3xl font-bold mt-1">{formatNumber(marketDetails?.volume)}</h2>
+            <p className="text-zinc-500 mt-1 text-xs">Sector: {marketDetails?.sector || "—"}</p>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="flex flex-wrap gap-4 mb-10">
-          <button
-            onClick={() => {
-              setSymbol("RELIANCE");
-              setTimeout(handleAnalyze, 0);
+        {analyzing && !marketDetails ? (
+          <SkeletonSection title="Loading market metrics" subtitle="Fetching /api/market-details…" />
+        ) : null}
+
+        {marketDetails ? (
+          <div className="grid md:grid-cols-6 gap-4">
+            <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800/70">
+              <p className="text-zinc-400 text-xs">PE Ratio</p>
+              <h3 className="text-xl font-bold mt-1">
+                {marketDetails.peRatio == null ? "—" : formatNumber(marketDetails.peRatio)}
+              </h3>
+            </div>
+            <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800/70">
+              <p className="text-zinc-400 text-xs">EPS</p>
+              <h3 className="text-xl font-bold mt-1">
+                {marketDetails.eps == null ? "—" : formatNumber(marketDetails.eps)}
+              </h3>
+            </div>
+            <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800/70">
+              <p className="text-zinc-400 text-xs">Beta</p>
+              <h3 className="text-xl font-bold mt-1">
+                {marketDetails.beta == null ? "—" : formatNumber(marketDetails.beta)}
+              </h3>
+            </div>
+            <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800/70 md:col-span-3">
+              <p className="text-zinc-400 text-xs">Industry</p>
+              <h3 className="text-xl font-bold mt-1">{marketDetails.industry || "—"}</h3>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="rounded-3xl overflow-hidden">
+          <ChartStateProvider initialSymbol={symbolInput.trim().toUpperCase() || "SPY"}>
+            <TradingTerminalChart />
+          </ChartStateProvider>
+        </div>
+
+        <NewsCardList
+          loading={newsLoading}
+          error={newsError}
+          items={news}
+          onRetry={() => void loadNews(symbolInput.trim().toUpperCase())}
+        />
+
+        {analyzing ? null : result ? (
+          <AiResearchResultCards result={result} />
+        ) : (
+          <section className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800/70">
+            <div className="text-sm font-bold text-yellow-400">No analysis yet</div>
+            <div className="text-zinc-400 mt-2">Run Analyze to generate structured premium cards.</div>
+          </section>
+        )}
+
+        <section className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800/70">
+          <h2 className="text-2xl text-yellow-400 font-bold mb-2">Recent Reports</h2>
+          {reportsLoading ? (
+            <div className="space-y-2 mt-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-10 rounded-xl bg-zinc-800 animate-pulse" />
+              ))}
+            </div>
+          ) : reportsError ? (
+            <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-200 text-sm">
+              {reportsError}
+              <div className="mt-3">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold"
+                  onClick={() => window.location.reload()}
+                >
+                  <RotateCcw size={14} /> Retry
+                </button>
+              </div>
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="text-zinc-500 mt-4 text-sm">No reports saved yet.</div>
+          ) : (
+            <div className="space-y-3 mt-4">
+              {reports.map((r, idx) => (
+                <div key={idx} className="bg-zinc-800 p-4 rounded-xl border border-zinc-700/60">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-bold text-white/95">📄 {r.ticker} Research Report</div>
+                    <div className="text-sm text-yellow-300 font-bold">{r.recommendation}</div>
+                  </div>
+                  <div className="text-xs text-zinc-400 mt-2">{r.summary}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800/70">
+          <h2 className="text-2xl font-bold text-yellow-400 mb-4">🤖 MarketMind AI Copilot</h2>
+
+          {chatError ? (
+            <div className="mb-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-200 text-sm">
+              {chatError}
+            </div>
+          ) : null}
+
+          <div className="h-80 overflow-y-auto bg-black rounded-2xl p-5 space-y-3">
+            {chatMessages.map((m, i) => (
+              <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                <div
+                  className={
+                    m.role === "user"
+                      ? "max-w-[85%] rounded-xl bg-yellow-400/15 border border-yellow-400/30 px-3 py-2 text-sm text-white"
+                      : "max-w-[85%] rounded-xl bg-black/30 border border-zinc-800 px-3 py-2 text-sm text-zinc-200"
+                  }
+                >
+                  {m.text}
+                </div>
+              </div>
+            ))}
+            {chatLoading ? <div className="text-xs text-zinc-400">Thinking…</div> : null}
+          </div>
+
+          <form
+            className="flex gap-3 mt-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void sendChat(chatInput);
             }}
-            className="bg-zinc-900 px-5 py-3 rounded-xl border border-zinc-700"
           >
-            Analyze RELIANCE
-          </button>
-
-          <button className="bg-zinc-900 px-5 py-3 rounded-xl border border-zinc-700">
-            Compare HDFC vs ICICI
-          </button>
-
-          <button className="bg-zinc-900 px-5 py-3 rounded-xl border border-zinc-700">
-            Top AI Stocks
-          </button>
-
-          <button className="bg-zinc-900 px-5 py-3 rounded-xl border border-zinc-700">
-            Market Outlook
-          </button>
-        </div>
-
-        {/* Features */}
-        <div className="grid md:grid-cols-4 gap-6 mb-10">
-          <div className="bg-zinc-900 p-6 rounded-3xl">
-            <Brain className="text-yellow-400 mb-4" />
-            <h3 className="font-bold text-xl">AI Analysis</h3>
-          </div>
-
-          <div className="bg-zinc-900 p-6 rounded-3xl">
-            <BarChart3 className="text-yellow-400 mb-4" />
-            <h3 className="font-bold text-xl">Comparison</h3>
-          </div>
-
-          <div className="bg-zinc-900 p-6 rounded-3xl">
-            <Briefcase className="text-yellow-400 mb-4" />
-            <h3 className="font-bold text-xl">Portfolio</h3>
-          </div>
-
-          <div className="bg-zinc-900 p-6 rounded-3xl">
-            <FileText className="text-yellow-400 mb-4" />
-            <h3 className="font-bold text-xl">Reports</h3>
-          </div>
-        </div>
-
-        {/* Market Trend Chart */}
-        <div className="bg-zinc-900 p-8 rounded-3xl mb-10">
-          <h2 className="text-3xl text-yellow-400 font-bold mb-6">
-            Market Trend
-          </h2>
-
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#facc15"
-                  strokeWidth={3}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Market Sentiment */}
-        <div className="bg-zinc-900 p-8 rounded-3xl mb-10">
-          <h2 className="text-3xl text-yellow-400 font-bold mb-6">
-            Market Sentiment
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-zinc-800 p-5 rounded-xl">
-              <h3 className="text-green-400 text-4xl font-bold">78%</h3>
-              <p>Bullish</p>
-            </div>
-            <div className="bg-zinc-800 p-5 rounded-xl">
-              <h3 className="text-yellow-400 text-4xl font-bold">15%</h3>
-              <p>Neutral</p>
-            </div>
-            <div className="bg-zinc-800 p-5 rounded-xl">
-              <h3 className="text-red-400 text-4xl font-bold">7%</h3>
-              <p>Bearish</p>
-            </div>
-          </div>
-        </div>
-
-        {/* AI Assistant */}
-        <div className="bg-zinc-900 p-8 rounded-3xl mb-10">
-          <h2 className="text-3xl font-bold text-yellow-400 mb-6">
-            🤖 MarketMind AI Copilot
-          </h2>
-
-          <div className="h-80 overflow-y-auto bg-black rounded-2xl p-5 mb-4">
-            {quote?.["Global Quote"] ? (
-              <div>
-                <div className="mb-4">
-                  <div className="bg-yellow-400 text-black p-3 rounded-xl inline-block">
-                    Analyze {globalQuote?.["01. symbol"]}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="bg-zinc-800 p-4 rounded-xl inline-block max-w-2xl">
-                    {globalQuote?.["01. symbol"]} quote loaded. Price: {price}. Change: {changes} ({changePercent || "—"}).
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="mb-4">
-                  <div className="bg-yellow-400 text-black p-3 rounded-xl inline-block">
-                    Analyze AAPL
-                  </div>
-                </div>
-
-                <div>
-                  <div className="bg-zinc-800 p-4 rounded-xl inline-block max-w-2xl">
-                    Run an analysis to fetch live quote data from AlphaVantage.
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-4">
             <input
-              placeholder="Ask AI anything..."
-              className="flex-1 bg-black border border-zinc-700 rounded-xl px-4 py-4"
-              disabled
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Explain today's movement, compare with Microsoft, why PE high, should I buy…"
+              className="flex-1 bg-black border border-zinc-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-yellow-400/50"
+              disabled={chatLoading || !chatOpen}
             />
-
-            <button className="bg-yellow-400 text-black px-8 rounded-xl font-bold" disabled>
+            <button
+              type="submit"
+              disabled={chatLoading || !chatOpen}
+              className="bg-yellow-400 text-black px-5 rounded-xl font-bold disabled:opacity-60 inline-flex items-center justify-center gap-2"
+            >
+              <Send size={16} />
               Send
             </button>
-          </div>
-        </div>
-
-        {/* Recent Reports */}
-        <div className="bg-zinc-900 p-8 rounded-3xl mb-10">
-          <h2 className="text-3xl text-yellow-400 font-bold mb-6">
-            Recent Reports
-          </h2>
-
-          <div className="space-y-3">
-            <div className="bg-zinc-800 p-4 rounded-xl">📄 RELIANCE Research Report</div>
-            <div className="bg-zinc-800 p-4 rounded-xl">📄 HDFC Risk Analysis</div>
-            <div className="bg-zinc-800 p-4 rounded-xl">📄 AI Sector Outlook 2026</div>
-          </div>
-        </div>
-
-        {/* Latest News */}
-        <div className="bg-zinc-900 p-8 rounded-3xl">
-          <h2 className="text-3xl text-yellow-400 font-bold mb-6">
-            Latest News
-          </h2>
-
-          <div className="space-y-4">
-            <div className="bg-zinc-800 p-4 rounded-xl">NVIDIA reaches new all-time high.</div>
-            <div className="bg-zinc-800 p-4 rounded-xl">Federal Reserve hints at rate cuts.</div>
-            <div className="bg-zinc-800 p-4 rounded-xl">AI stocks continue strong rally.</div>
-          </div>
-        </div>
+          </form>
+        </section>
       </section>
     </main>
   );
 }
+

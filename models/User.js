@@ -6,6 +6,15 @@ const UserSchema = new mongoose.Schema({
     required: true,
   },
 
+  watchlist: [
+    {
+      symbol: { type: String, required: true },
+      companyName: { type: String },
+      addedAt: { type: Date, default: Date.now },
+    },
+  ],
+
+
   email: {
     type: String,
     required: true,

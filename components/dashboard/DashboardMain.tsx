@@ -4,11 +4,10 @@ import React from "react";
 
 import TradingTerminalChart from "@/components/dashboard/TradingTerminalChart";
 import MarketMovers from "@/components/dashboard/MarketMovers";
-import MarketHeatmap from "@/components/dashboard/MarketHeatmap";
+
 import GlobalMarketsGrid from "@/components/dashboard/GlobalMarketsGrid";
 import LatestNewsGrid from "@/components/dashboard/LatestNewsGrid";
 import AIDailyBrief from "@/components/dashboard/AIDailyBrief";
-import AINewsInsights from "@/components/dashboard/AINewsInsights";
 
 import { PortfolioDataProvider } from "@/components/dashboard/PortfolioDataContext";
 
@@ -21,7 +20,6 @@ export default function DashboardMain({
   newsLoading,
   news,
 }: {
-
   marketLoading: boolean;
   marketRows: Array<{
     symbol: string;
@@ -39,39 +37,60 @@ export default function DashboardMain({
     };
   }>;
 }) {
-  // marketLoading/newsLoading are kept for parity with existing widget props.
-  // Some widgets don't currently use them, which is fine for now.
+  void marketRows;
 
   return (
     <section className="min-w-0 w-full space-y-6">
+      {/* Workspace row A: Chart dominates attention */}
       <div className="min-w-0 overflow-hidden">
         <TradingTerminalChart />
       </div>
 
-      <PortfolioDataProvider>
-        <div className="min-w-0 overflow-hidden">
-          <MarketMovers rows={marketRows} />
+      {/* Workspace row B: Market Intelligence (single, larger area) */}
+      <section className="min-w-0 overflow-hidden rounded-3xl border border-zinc-800/70 bg-[#0F0F12]/30 backdrop-blur-xl">
+        <div className="px-5 py-4 border-b border-zinc-800/60">
+          <h3 className="text-sm font-bold tracking-wide text-white/90">Market Intelligence</h3>
+          <p className="text-xs text-zinc-500 mt-1">From live movers to AI-driven context—one flow.</p>
         </div>
-      </PortfolioDataProvider>
 
-      <div className="min-w-0 overflow-hidden">
-        <MarketHeatmap />
-      </div>
+        <div className="p-5 space-y-5">
+          {/* Market Pulse */}
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-zinc-800/60 bg-black/20">
+            <div className="px-5 py-3 border-b border-zinc-800/60">
+              <div className="text-xs font-bold tracking-wider text-white/90">Market Pulse</div>
+              <div className="text-[11px] text-zinc-500 mt-1">Movers + global positioning.</div>
+            </div>
+            <div className="p-5 space-y-5">
+              <PortfolioDataProvider>
+                <div className="min-w-0 overflow-hidden">
+                  <MarketMovers rows={marketRows} />
+                </div>
+              </PortfolioDataProvider>
+              <div className="min-w-0 overflow-hidden">
+                <GlobalMarketsGrid />
+              </div>
+            </div>
+          </div>
 
-      <div className="min-w-0 overflow-hidden">
-        <GlobalMarketsGrid />
-      </div>
-
-      <div className="min-w-0 overflow-hidden">
-        <LatestNewsGrid items={news} loading={newsLoading} />
-      </div>
-
-      <div className="min-w-0 overflow-hidden">
-        <AIDailyBrief />
-      </div>
-
-
+          {/* News & AI Briefing */}
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-zinc-800/60 bg-black/20">
+            <div className="px-5 py-3 border-b border-zinc-800/60">
+              <div className="text-xs font-bold tracking-wider text-white/90">News & AI Briefing</div>
+              <div className="text-[11px] text-zinc-500 mt-1">Headlines + daily insight.</div>
+            </div>
+            <div className="p-5 space-y-5">
+              <div className="min-w-0 overflow-hidden">
+                <LatestNewsGrid items={news} loading={newsLoading} />
+              </div>
+              <div className="min-w-0 overflow-hidden">
+                <AIDailyBrief />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </section>
   );
 }
+
 

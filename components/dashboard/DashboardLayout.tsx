@@ -92,17 +92,19 @@ export default function DashboardLayout() {
           <DashboardHeaderSection />
           <DashboardMetrics />
 
-          <div className="grid grid-cols-[280px_minmax(0,1fr)_350px] gap-5 items-start">
-            {/* Left rail: Market Watch + Alerts */}
-            <aside className="w-[280px] shrink-0" aria-label="Dashboard sidebar">
-              <div className="rounded-2xl border border-[#27272A]/80 bg-[#18181B]/50 backdrop-blur-xl p-4 space-y-4 shadow-[0_0_0_1px_rgba(250,204,21,0.0)] hover:border-[#FACC15]/40">
+          {/* Workspace grid: center stage dominates attention */}
+          <div className="grid grid-cols-[250px_minmax(0,1fr)_300px] gap-5 items-start">
+            {/* Left rail: Watch/Alerts (support) */}
+            <aside className="w-[250px] shrink-0" aria-label="Market sidebar">
+              <div className="rounded-2xl border border-[#27272A]/80 bg-[#18181B]/45 backdrop-blur-xl p-4 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-xs text-zinc-400 font-medium">Market Watch</div>
+                    <div className="text-[11px] text-zinc-400 font-medium tracking-wider">WATCH</div>
                     <div className="text-sm font-semibold mt-1">Quick movers</div>
                   </div>
                   <div className="text-[11px] text-zinc-500">Live</div>
                 </div>
+
 
                 <div className="space-y-2">
                   {[
